@@ -10,6 +10,7 @@ class Campaign(models.Model):
         ("PENDING", "PENDING"), ("VERIFIED", "VERIFIED"), ("REJECTED", "REJECTED")), default="PENDING")
     fundraiser = models.ForeignKey(
         "users.User", on_delete=models.CASCADE, related_name="campaigns", related_query_name="campaigns")
+    image_url = models.URLField(blank=True)
 
     def __str__(self):
         return f"{self.title}, {self.created_at}"
