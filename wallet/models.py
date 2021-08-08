@@ -9,7 +9,8 @@ class TopUpHistory(models.Model):
 
     date = models.DateTimeField(auto_now_add=True)
 
-    amount = models.IntegerField(verbose_name="Top Up Amount", default=0)
+    amount = models.PositiveIntegerField(
+        verbose_name="Top Up Amount", default=0)
 
     verified = models.BooleanField(verbose_name="Top Up Verified")
     bank_name = models.CharField(max_length=255)
@@ -29,7 +30,7 @@ class WithdrawRequest(models.Model):
     request_date = models.DateTimeField(auto_now_add=True)
     verified_date = models.DateTimeField(null=True, blank=True)
 
-    amount = models.IntegerField(default=0)
+    amount = models.PositiveIntegerField(default=0)
     verified = models.BooleanField(default=False)
 
     def __str__(self) -> str:
@@ -41,7 +42,7 @@ class DonationHistory(models.Model):
                              related_name="donation_histories", related_query_name="donation_histories")
 
     date = models.DateTimeField(auto_now_add=True)
-    amount = models.IntegerField(default=0)
+    amount = models.PositiveIntegerField(default=0)
     campaign = models.ForeignKey("campaign.Campaign", on_delete=models.CASCADE)
 
     def __str__(self) -> str:
