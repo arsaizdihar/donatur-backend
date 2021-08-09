@@ -14,6 +14,7 @@ import os
 from datetime import timedelta
 from pathlib import Path
 
+import django_heroku
 from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -153,3 +154,5 @@ SIMPLE_JWT = {
     "ROTATE_REFRESH_TOKENS": True,
     "ACCESS_TOKEN_LIFETIME": timedelta(minutes=15)
 }
+
+django_heroku.settings(locals())
