@@ -1,8 +1,7 @@
 from django.test import TestCase
 from rest_framework import status
 from rest_framework.test import APIClient
-from rest_framework_simplejwt.tokens import RefreshToken
-from users.models import User
+from users.models import FundraiserProposal, User
 
 
 class AuthViewsTests(TestCase):
@@ -17,24 +16,6 @@ class AuthViewsTests(TestCase):
             email="test@gmail.com",
             password="tester41",
         )
-
-    @property
-    def get_data_registered_user(self):
-        url = f"{self.AUTH_URL}/register/"
-        data = {
-            "first_name": "Te",
-            "last_name": "st",
-            "email": "tester@gmail.com",
-            "password": "tester41",
-        }
-        data_client = self.client.post(url, data, format="json")
-        return data_client
-
-    @property
-    def test_register_user(self):
-        register_user = self.get_data_registered_user
-        self.assertEqual(register_user.status_code, status.HTTP_201_CREATED)
-        self.assertIsNotNone(User.objects.get(email="tester@gmail.com"))
 
     def test_login_token(self):
         url = f"{self.AUTH_URL}/login/"
@@ -88,11 +69,16 @@ class AuthViewsTests(TestCase):
             "last_name": "st",
             "email": "tester@gmail.com",
             "password": "tester41",
-            "role": "FUNDRAISER"
+            "role": "FUNDRAISER",
+            "proposal_text": "test proposal text"
         }
         self.client.post(url, data, format="json")
         response = User.objects.filter(role="FUNDRAISER").count()
         self.assertEqual(response, 1)
+
+        new_fundraiser_proposal = FundraiserProposal.objects.get(
+            fundraiser__email="tester@gmail.com")
+        self.assertEqual(new_fundraiser_proposal.text, "test proposal text")
 
     def test_invalid_refresh_token_and_blank_refresh_token(self):
         url = f"{self.AUTH_URL}/refresh/"
@@ -147,21 +133,16 @@ class VerifyFundraiserViewsTests(TestCase):
         self.client.login(email="admin@admin.com", password="admin1234")
 
         new_fundraiser = User.objects.create_user(
-            first_name="F", last_name="Test", email="ftest@gmail.com", password="12345678", role="FUNDRAISER")
+            first_name="F", last_name="Test", email="ftest@gmail.com", password="12345678", role="FUNDRAISER", proposal_text="test fundraiser proposal")
         fundraiser_list_response = self.client.get(self.URL)
         self.assertEqual(fundraiser_list_response.status_code,
                          status.HTTP_200_OK)
 
         data = fundraiser_list_response.json()
-        self.assertLessEqual(1, len(data))
-
-        new_fundraiser_in_data = False
-        for user in data:
-            if user.get("id") == new_fundraiser.id:
-                new_fundraiser_in_data = True
-                break
-
-        self.assertEqual(new_fundraiser_in_data, True)
+        self.assertEqual(len(data), 1)
+        self.assertEqual(data[0].get("id"), new_fundraiser.id)
+        self.assertEqual(data[0].get("proposal_text"),
+                         "test fundraiser proposal")
 
         fundraiser_verify_response = self.client.put(
             self.URL, {"id": new_fundraiser.id})

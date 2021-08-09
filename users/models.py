@@ -25,3 +25,9 @@ class User(AbstractUser):
         if self.role == "FUNDRAISER":
             self.verified = True
             self.save()
+
+
+class FundraiserProposal(models.Model):
+    fundraiser = models.OneToOneField(
+        User, on_delete=models.CASCADE, related_name="fundraiser_proposal", related_query_name="fundraiser_proposal", null=True)
+    text = models.TextField(null=True, blank=True)
