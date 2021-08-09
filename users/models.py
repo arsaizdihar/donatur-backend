@@ -16,7 +16,12 @@ class User(AbstractUser):
     role = models.CharField(verbose_name="User Role", max_length=10, choices=(
         ("DONATUR", "DONATUR"), ("FUNDRAISER", "FUNDRAISER")), null=True, blank=True)
     USERNAME_FIELD = "email"
-    
+
     REQUIRED_FIELDS = ["first_name", "last_name"]
 
     objects = CustomUserManager()
+
+    def verify_fundraiser(self):
+        if self.role == "FUNDRAISER":
+            self.verified = True
+            self.save()
