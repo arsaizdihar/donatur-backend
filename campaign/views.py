@@ -78,21 +78,34 @@ class CampaignListFundraiserById(generics.RetrieveDestroyAPIView):
 
 class CampaignListProposal(generics.ListAPIView):
     """
-    GET     api/admin/proposals/ - List of Pending Proposal Campaigns
+    GET     api/admin/proposals/      -  List of Pending Proposal Campaigns
     """
+    permission_classes = [permissions.IsAdminUser]
     queryset = Campaign.objects.filter(status="PENDING")
     serializer_class = CampaignListProposalSerializer
 
-class CampaignListProposalById(generics.ListAPIView):
+class CampaignListProposalById(generics.RetrieveUpdateAPIView):
     """
-    GET     api/admin/proposals/<id>/ - Details of current Pending Proposal Campaign
+    GET     api/admin/proposals/<id>/  - Details of current Pending Proposal Campaign
+    PATCH   api/admin/proposals/<id>/  - Verify (status) proposal request by id
     """
-    queryset = Campaign.objects.all()
+    permission_classes = [permissions.IsAdminUser]
+    queryset = Campaign.objects.filter(status="PENDING")
     serializer_class = CampaignListProposalByIdSerializer
     def get(self, request, pk):
         try:
             campaign = Campaign.objects.get(pk=pk)
             serializer = self.get_serializer(campaign, many=False)
             return Response(serializer.data, status=status.HTTP_200_OK)
+        except Campaign.DoesNotExist:
+            return Response({"status": "campaign doesn't exist"}, status=status.HTTP_404_NOT_FOUND)
+    
+    def patch(self, request, pk):
+        try:
+            campaign = Campaign.objects.get(pk=pk)
+            serializer = self.get_serializer(campaign, many=False)
+            if serializer.is_valid():
+                serializer.update()
+            return Response({"success": "status updated successfully"}, status=status.HTTP_204_NO_CONTENT)
         except Campaign.DoesNotExist:
             return Response({"status": "campaign doesn't exist"}, status=status.HTTP_404_NOT_FOUND)
