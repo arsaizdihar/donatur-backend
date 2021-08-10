@@ -80,6 +80,18 @@ class AuthViewsTests(TestCase):
             fundraiser__email="tester@gmail.com")
         self.assertEqual(new_fundraiser_proposal.text, "test proposal text")
 
+    def test_register_fundraiser_no_proposal(self):
+        url = f"{self.AUTH_URL}/register/"
+        data = {
+            "first_name": "Te",
+            "last_name": "st",
+            "email": "tester@gmail.com",
+            "password": "tester41",
+            "role": "FUNDRAISER",
+        }
+        response = self.client.post(url, data, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
     def test_invalid_refresh_token_and_blank_refresh_token(self):
         url = f"{self.AUTH_URL}/refresh/"
         response = self.client.post(url, data={
@@ -116,6 +128,21 @@ class AuthViewsTests(TestCase):
         response = self.client.get(url_refresh_token)
         self.assertEqual(response.status_code,
                          status.HTTP_405_METHOD_NOT_ALLOWED)
+
+    def test_me_view(self):
+        url = f"{self.AUTH_URL}/me/"
+        self.client.login(email="test@gmail.com", password="tester41")
+        response = self.client.get(url)
+        data = response.json()
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(data.get("email"), "test@gmail.com")
+
+    def test_me_without_credentials(self):
+        url = f"{self.AUTH_URL}/me/"
+        response = self.client.get(url)
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
 
 class VerifyFundraiserViewsTests(TestCase):

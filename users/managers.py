@@ -18,12 +18,10 @@ class CustomUserManager(BaseUserManager):
         if is_fundraiser and proposal_text is None:
             raise ValueError("proposal_text is required for role FUNDRAISER.")
 
-        if not email:
-            raise ValueError("The Email must be set")
-
         email = self.normalize_email(email)
         user = self.model(email=email, **extra_fields)
         user.set_password(password)
+        user.full_clean()
         user.save()
 
         from .models import FundraiserProposal
@@ -35,12 +33,8 @@ class CustomUserManager(BaseUserManager):
         """
         Create and save a SuperUser with the given email and password.
         """
-        extra_fields.setdefault("is_staff", True)
-        extra_fields.setdefault("is_superuser", True)
-        extra_fields.setdefault("is_active", True)
+        extra_fields["is_staff"] = True
+        extra_fields["is_superuser"] = True
+        extra_fields["is_active"] = True
 
-        if extra_fields.get("is_staff") is not True:
-            raise ValueError("Superuser must have is_staff=True.")
-        if extra_fields.get("is_superuser") is not True:
-            raise ValueError("Superuser must have is_superuser=True.")
         return self.create_user(email, password, **extra_fields)
