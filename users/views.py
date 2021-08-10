@@ -9,6 +9,9 @@ from .serializers import (FundraiserRequestSerializer, MeSerializer,
 
 
 class RegisterView(generics.CreateAPIView):
+    """
+    POST     api/register/ - Register as DONATUR or FUNDRAISER
+    """
     serializer_class = RegisterSerializer
 
     def create(self, request, *args, **kwargs):
@@ -25,6 +28,12 @@ class RegisterView(generics.CreateAPIView):
 
 
 class FundraiserRequestView(generics.ListAPIView, generics.UpdateAPIView):
+    """
+    ADMIN ONLY
+    GET         api/fundraiser-requests/ - List of fundraiser registration requests
+    PUT, PATCH  api/fundraiser-requests/ - Verify fundraiser registration by user id
+    """
+
     permission_classes = (permissions.IsAdminUser, )
     serializer_class = FundraiserRequestSerializer
     queryset = User.objects.filter(role="FUNDRAISER", verified=False)
@@ -37,6 +46,9 @@ class FundraiserRequestView(generics.ListAPIView, generics.UpdateAPIView):
 
 
 class MeView(generics.RetrieveAPIView):
+    """
+    GET     api/me/  -  Details of current user
+    """
     permission_classes = (permissions.IsAuthenticated, )
     serializer_class = MeSerializer
 

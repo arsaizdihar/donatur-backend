@@ -1,4 +1,5 @@
 from django.utils import timezone
+from django.utils.dateparse import parse_datetime
 from rest_framework import status
 from rest_framework.test import APIClient, APITestCase
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -74,11 +75,34 @@ class CampaignFundraiserViewTests(APITestCase):
         response = self.client.post(url, data, **self.bearer_token)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
+    def test_fundraiser_create_campaign_missing_field(self):
+        url = f"{self.BASE_URL}/"
+        data = {
+            "description": "Description",
+            "image_url": ""
+        }
+        response = self.client.post(url, data, **self.bearer_token)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
     def test_get_fundraiser_detailed_campaign(self):
         campaign = self.fundraiser_create_campaign
         url = f"{self.BASE_URL}/{campaign.id}/"
         response = self.client.get(url, format="json", **self.bearer_token)
+        data = response.json()
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(data.get("id"), campaign.id)
+
+        keys = ('id', 'title', 'description', 'amount', 'target_amount',
+                'status', 'image_url')
+
+        for key in keys:
+            self.assertEqual(data.get(key), getattr(campaign, key))
+
+        self.assertEqual(parse_datetime(data.get(
+            "created_at")), campaign.created_at)
+
+        self.assertEqual(data.get(
+            "fundraiser"), self.user.get_full_name())
 
     def test_get_fundraiser_invalid_id(self):
         url = f"{self.BASE_URL}/99/"
