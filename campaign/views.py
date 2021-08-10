@@ -6,7 +6,9 @@ from .models import Campaign
 from .serializers import (
     CampaignListSerializer, 
     CampaignListFundraiserSerializer, 
-    CampaignListFundraiserByIdSerializer
+    CampaignListFundraiserByIdSerializer,
+    CampaignListProposalSerializer,
+    CampaignListProposalByIdSerializer
 )
 
 class CampaignList(generics.ListAPIView):
@@ -73,3 +75,24 @@ class CampaignListFundraiserById(generics.RetrieveDestroyAPIView):
         except Campaign.DoesNotExist:
             return Response({"status": "fail"}, status=status.HTTP_404_NOT_FOUND)
         return Response({"status": "success"}, status=status.HTTP_200_OK)
+
+class CampaignListProposal(generics.ListAPIView):
+    """
+    GET     api/admin/proposals/ - List of Pending Proposal Campaigns
+    """
+    queryset = Campaign.objects.filter(status="PENDING")
+    serializer_class = CampaignListProposalSerializer
+
+class CampaignListProposalById(generics.ListAPIView):
+    """
+    GET     api/admin/proposals/<id>/ - Details of current Pending Proposal Campaign
+    """
+    queryset = Campaign.objects.all()
+    serializer_class = CampaignListProposalByIdSerializer
+    def get(self, request, pk):
+        try:
+            campaign = Campaign.objects.get(pk=pk)
+            serializer = self.get_serializer(campaign, many=False)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except Campaign.DoesNotExist:
+            return Response({"status": "campaign doesn't exist"}, status=status.HTTP_404_NOT_FOUND)

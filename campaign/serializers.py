@@ -29,3 +29,20 @@ class CampaignListFundraiserByIdSerializer(serializers.ModelSerializer):
         model = Campaign
         fields = ('id', 'title', 'description', 'amount', 'target_amount',
                   'created_at', 'status', 'fundraiser', 'image_url')
+
+class CampaignListProposalSerializer(serializers.ModelSerializer):
+    fundraiser = serializers.CharField(
+        source="fundraiser.get_full_name", required=False)
+    class Meta:
+        model = Campaign
+        fields = ('id', 'title', 'description', 'target_amount',
+                  'created_at', 'status', 'fundraiser', 'image_url')
+
+class CampaignListProposalByIdSerializer(serializers.ModelSerializer):
+    fundraiser = serializers.CharField(
+        source="fundraiser.get_full_name", required=False)
+
+    class Meta:
+        model = Campaign
+        fields = ('id', 'title', 'description', 'amount', 'target_amount',
+                  'created_at', 'status', 'fundraiser', 'image_url')
