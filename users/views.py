@@ -4,8 +4,10 @@ from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from .models import FundraiserProposal, User
+from campaign.models import Campaign
 from .serializers import (FundraiserRequestSerializer, MeSerializer,
-                          RegisterSerializer)
+                          RegisterSerializer, CampaignProposalSerializer,
+                          CampaignProposalByIdSerializer)
 
 
 class RegisterView(generics.CreateAPIView):
@@ -54,3 +56,24 @@ class MeView(generics.RetrieveAPIView):
 
     def get_object(self):
         return self.request.user
+
+class CampaignProposal(generics.ListAPIView):
+    """
+    GET     api/admin/proposals/ - List of Pending Proposal Campaigns
+    """
+    queryset = Campaign.objects.filter(status="PENDING")
+    serializer_class = CampaignProposalSerializer
+
+class CampaignProposalById(generics.ListAPIView):
+    """
+    GET     api/admin/proposals/<id>/ - Details of current Pending Proposal Campaign
+    """
+    queryset = Campaign.objects.all()
+    serializer_class = CampaignProposalByIdSerializer
+    def get(self, request, pk):
+        try:
+            campaign = Campaign.objects.get(pk=pk)
+            serializer = self.get_serializer(campaign, many=False)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except Campaign.DoesNotExist:
+            return Response({"status": "campaign doesn't exist"}, status=status.HTTP_404_NOT_FOUND)

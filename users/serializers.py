@@ -1,7 +1,7 @@
 from rest_framework import serializers
 
 from .models import User
-
+from campaign.models import Campaign
 
 class RegisterSerializer(serializers.ModelSerializer):
     proposal_text = serializers.CharField(
@@ -31,3 +31,20 @@ class MeSerializer(serializers.ModelSerializer):
         fields = ('id', 'first_name', 'last_name', 'email',
                   'role', 'is_staff', 'wallet_amount', 'verified')
         read_only_fields = ('is_staff', 'role', 'wallet_amount', 'verified')
+
+class CampaignProposalSerializer(serializers.ModelSerializer):
+    fundraiser = serializers.CharField(
+        source="fundraiser.get_full_name", required=False)
+    class Meta:
+        model = Campaign
+        fields = ('id', 'title', 'description', 'target_amount',
+                  'created_at', 'status', 'fundraiser', 'image_url')
+
+class CampaignProposalByIdSerializer(serializers.ModelSerializer):
+    fundraiser = serializers.CharField(
+        source="fundraiser.get_full_name", required=False)
+
+    class Meta:
+        model = Campaign
+        fields = ('id', 'title', 'description', 'amount', 'target_amount',
+                  'created_at', 'status', 'fundraiser', 'image_url')
