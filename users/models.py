@@ -8,7 +8,8 @@ class User(AbstractUser):
     username = None
 
     email = models.EmailField('Email address', unique=True)
-
+    first_name = models.CharField('first name', max_length=150)
+    last_name = models.CharField('last name', max_length=150)
     verified = models.BooleanField(
         verbose_name="Fundraiser Verified", default=False)
     wallet_amount = models.PositiveIntegerField(

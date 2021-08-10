@@ -17,14 +17,17 @@ class RegisterView(generics.CreateAPIView):
     def create(self, request, *args, **kwargs):
 
         serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        try:
-            user = User.objects.create_user(**serializer.data)
-        except ValueError as e:
-            return Response({"proposal_text": [str(e)]}, status.HTTP_400_BAD_REQUEST)
 
-        refresh = RefreshToken.for_user(user)
-        return Response({"access": str(refresh.access_token), "refresh": str(refresh)}, status=status.HTTP_201_CREATED)
+        if serializer.is_valid():
+            try:
+                user = User.objects.create_user(**serializer.data)
+            except ValueError as e:
+                return Response({"proposal_text": [str(e)]}, status=status. HTTP_400_BAD_REQUEST)
+
+            refresh = RefreshToken.for_user(user)
+            return Response({"access": str(refresh.access_token), "refresh": str(refresh)}, status=status.HTTP_201_CREATED)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class FundraiserRequestView(generics.ListAPIView, generics.UpdateAPIView):

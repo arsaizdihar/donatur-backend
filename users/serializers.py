@@ -4,8 +4,7 @@ from .models import User
 
 
 class RegisterSerializer(serializers.ModelSerializer):
-    proposal_text = serializers.CharField(
-        required=False, source="fundraiser_proposal.text")
+    proposal_text = serializers.CharField(required=False)
 
     class Meta:
         model = User
