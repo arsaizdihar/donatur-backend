@@ -13,4 +13,5 @@ urlpatterns = [
     path('admin/proposals/<int:pk>/', CampaignProposalById.as_view(), name='campaign-proposal-id'),
     path('me/', MeView.as_view(), name="me"),
     path('', include('campaign.urls')),
+    path('', include('wallet.urls'))
 ]
