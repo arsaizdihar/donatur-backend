@@ -11,4 +11,5 @@ urlpatterns = [
          FundraiserRequestView.as_view(), name="fundraiser-requests"),
     path('me/', MeView.as_view(), name="me"),
     path('', include('campaign.urls')),
+    path('', include('wallet.urls'))
 ]

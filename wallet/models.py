@@ -1,6 +1,5 @@
-from campaign.models import Campaign
+from django.core.validators import RegexValidator
 from django.db import models
-from django.db.models.base import Model
 
 
 class TopUpHistory(models.Model):
@@ -12,13 +11,27 @@ class TopUpHistory(models.Model):
     amount = models.PositiveIntegerField(
         verbose_name="Top Up Amount", default=0)
 
-    verified = models.BooleanField(verbose_name="Top Up Verified")
+    verified = models.BooleanField(
+        verbose_name="Top Up Verified", default=False)
+
     bank_name = models.CharField(max_length=255)
     bank_account = models.CharField(max_length=255)
-    bank_account_number = models.CharField(max_length=255)
+    bank_account_number = models.CharField(
+        max_length=255, validators=(RegexValidator(r'^[0-9]+$', "Number only"), ))
+
+    def verify(self):
+        if not self.verified:
+            self.verified = True
+            self.save()
+            user = self.user
+            user.wallet_amount += self.amount
+            user.save()
 
     def __str__(self) -> str:
         return f"{self.user.id} {self.date}"
+
+    class Meta:
+        ordering = ("-date", )
 
 
 class WithdrawRequest(models.Model):
