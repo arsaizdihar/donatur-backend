@@ -24,8 +24,10 @@ class CustomUserManager(BaseUserManager):
         user.full_clean()
         user.save()
 
-        from .models import FundraiserProposal
-        FundraiserProposal.objects.create(fundraiser=user, text=proposal_text)
+        if is_fundraiser:
+            from .models import FundraiserProposal
+            FundraiserProposal.objects.create(
+                fundraiser=user, text=proposal_text)
 
         return user
 

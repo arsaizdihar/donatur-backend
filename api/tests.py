@@ -13,6 +13,8 @@ class AuthViewsTests(TestCase):
     @classmethod
     def setUpTestData(cls) -> None:
         cls.user = User.objects.create_user(
+            first_name="Te",
+            last_name="st",
             email="test@gmail.com",
             password="tester41",
         )
@@ -20,6 +22,8 @@ class AuthViewsTests(TestCase):
     def test_login_token(self):
         url = f"{self.AUTH_URL}/login/"
         data = {
+            "first_name": "Te",
+            "last_name": "st",
             "email": "test@gmail.com",
             "password": "tester41"
         }
@@ -31,6 +35,8 @@ class AuthViewsTests(TestCase):
     def test_refresh_token(self):
         url = f"{self.AUTH_URL}/login/"
         data = {
+            "first_name": "Te",
+            "last_name": "st",
             "email": "test@gmail.com",
             "password": "tester41"
         }
@@ -107,6 +113,8 @@ class AuthViewsTests(TestCase):
     def test_login_with_unregister_user(self):
         url = f"{self.AUTH_URL}/login/"
         data = {
+            "first_name": "Te",
+            "last_name": "st",
             "email": "unregister@gmail.com",
             "password": "unregister41"
         }
@@ -154,6 +162,8 @@ class VerifyFundraiserViewsTests(TestCase):
     @classmethod
     def setUpTestData(cls) -> None:
         cls.user = User.objects.create_superuser(
+            first_name="Te",
+            last_name="st",
             email="admin@admin.com", password="admin1234")
 
     def test_new_fundraiser_and_verify(self):

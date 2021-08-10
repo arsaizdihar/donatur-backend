@@ -17,6 +17,7 @@ class CampaignFundraiserViewTests(APITestCase):
     @classmethod
     def setUpTestData(cls) -> None:
         cls.user = User.objects.create_user(
+            first_name="Te", last_name="st",
             email="user@user.com", password="user1234", role="FUNDRAISER", proposal_text="CAMPAIGN")
 
     @property
