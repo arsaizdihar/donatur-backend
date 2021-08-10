@@ -10,7 +10,6 @@ from campaign.models import Campaign
 
 class CampaignFundraiserViewTests(APITestCase):
     BASE_URL = "http://127.0.0.1:8000/api/fundraiser/campaigns"
-    AUTH_URL = "http://127.0.0.1:8000/api"
 
     def setUp(self) -> None:
         self.client = APIClient()
@@ -33,7 +32,7 @@ class CampaignFundraiserViewTests(APITestCase):
             description="Description",
             target_amount=2000000,
             created_at=timezone.now(),
-            status="FUNDRAISER",
+            status="PENDING",
             fundraiser=self.user,
             image_url=""
         )
@@ -58,6 +57,20 @@ class CampaignFundraiserViewTests(APITestCase):
         response = self.client.patch(url, **self.bearer_token)
         self.assertEqual(response.status_code,
                          status.HTTP_405_METHOD_NOT_ALLOWED)
+
+    def test_get_all_campaigns(self):
+        campaign = self.fundraiser_create_campaign
+        campaign2 = self.fundraiser_create_campaign
+        campaign2.status = "VERIFIED"
+        campaign2.save()
+
+        url = f"http://127.0.0.1:8000/api/campaigns/"
+        response = self.client.get(url, format="json")
+        data = response.json()
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(data), 1)
+        self.assertEqual(Campaign.objects.all().count(), 2)
 
     def test_fundraiser_get_all_campaigns(self):
         url = f"{self.BASE_URL}/"

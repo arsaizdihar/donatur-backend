@@ -3,10 +3,20 @@ from rest_framework.response import Response
 from users.permissions import isFundraiser
 
 from .models import Campaign
-from .serializers import CampaignListByIdSerializer, CampaignListSerializer
+from .serializers import (
+    CampaignListSerializer, 
+    CampaignListFundraiserSerializer, 
+    CampaignListFundraiserByIdSerializer
+)
 
-
-class CampaignList(generics.ListCreateAPIView):
+class CampaignList(generics.ListAPIView):
+    """
+    Allowed Method: GET
+    GET     api/fundraiser/campaigns/ - List Verified Campaigns
+    """
+    queryset = Campaign.objects.filter(status="VERIFIED")
+    serializer_class = CampaignListSerializer
+class CampaignListFundraiser(generics.ListCreateAPIView):
     """
     Allowed Method: GET, POST
     GET     api/fundraiser/campaigns/ - List Campaign from particular fundraiser
@@ -17,7 +27,7 @@ class CampaignList(generics.ListCreateAPIView):
         permissions.IsAuthenticatedOrReadOnly
     ]
     queryset = Campaign.objects.all()
-    serializer_class = CampaignListSerializer
+    serializer_class = CampaignListFundraiserSerializer
 
     def get(self, request):
         qs = Campaign.objects.filter(fundraiser=request.user.id)
@@ -36,7 +46,7 @@ class CampaignList(generics.ListCreateAPIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-class CampaignListById(generics.RetrieveDestroyAPIView):
+class CampaignListFundraiserById(generics.RetrieveDestroyAPIView):
     """
     GET     api/fundraiser/campaigns/<id>/ - Retrieve Campaign by id to withdraw the amount
     DELETE  api/fundraiser/campaigns/<id>/ - Delete Campaign by id
@@ -46,7 +56,7 @@ class CampaignListById(generics.RetrieveDestroyAPIView):
         permissions.IsAuthenticated
     ]
     queryset = Campaign.objects.all()
-    serializer_class = CampaignListByIdSerializer
+    serializer_class = CampaignListFundraiserByIdSerializer
 
     def get(self, request, pk):
         try:
