@@ -13,9 +13,11 @@ class TopUpViewTests(APITestCase):
     @classmethod
     def setUpTestData(cls) -> None:
         cls.admin = User.objects.create_superuser(
-            email="admin@admin.com", password="admin1234")
+            email="admin@admin.com", password="admin1234", first_name="Te",
+            last_name="st")
         cls.user = User.objects.create_user(
-            email="user@user.com", password="user1234", role="DONATUR")
+            email="user@user.com", password="user1234", role="DONATUR", first_name="Te",
+            last_name="st")
         cls.data = {
             "bank_name": "BCA",
             "bank_account": "User",
