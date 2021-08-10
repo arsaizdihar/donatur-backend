@@ -3,10 +3,22 @@ from rest_framework.response import Response
 from users.permissions import isFundraiser
 
 from .models import Campaign
-from .serializers import CampaignListByIdSerializer, CampaignListSerializer
+from .serializers import (
+    CampaignListSerializer, 
+    CampaignListFundraiserSerializer, 
+    CampaignListFundraiserByIdSerializer,
+    CampaignListProposalSerializer,
+    CampaignListProposalByIdSerializer
+)
 
-
-class CampaignList(generics.ListCreateAPIView):
+class CampaignList(generics.ListAPIView):
+    """
+    Allowed Method: GET
+    GET     api/fundraiser/campaigns/ - List Verified Campaigns
+    """
+    queryset = Campaign.objects.filter(status="VERIFIED")
+    serializer_class = CampaignListSerializer
+class CampaignListFundraiser(generics.ListCreateAPIView):
     """
     Allowed Method: GET, POST
     GET     api/fundraiser/campaigns/ - List Campaign from particular fundraiser
@@ -17,7 +29,7 @@ class CampaignList(generics.ListCreateAPIView):
         permissions.IsAuthenticatedOrReadOnly
     ]
     queryset = Campaign.objects.all()
-    serializer_class = CampaignListSerializer
+    serializer_class = CampaignListFundraiserSerializer
 
     def get(self, request):
         qs = Campaign.objects.filter(fundraiser=request.user.id)
@@ -36,7 +48,7 @@ class CampaignList(generics.ListCreateAPIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-class CampaignListById(generics.RetrieveDestroyAPIView):
+class CampaignListFundraiserById(generics.RetrieveDestroyAPIView):
     """
     GET     api/fundraiser/campaigns/<id>/ - Retrieve Campaign by id to withdraw the amount
     DELETE  api/fundraiser/campaigns/<id>/ - Delete Campaign by id
@@ -46,7 +58,7 @@ class CampaignListById(generics.RetrieveDestroyAPIView):
         permissions.IsAuthenticated
     ]
     queryset = Campaign.objects.all()
-    serializer_class = CampaignListByIdSerializer
+    serializer_class = CampaignListFundraiserByIdSerializer
 
     def get(self, request, pk):
         try:
@@ -63,3 +75,37 @@ class CampaignListById(generics.RetrieveDestroyAPIView):
         except Campaign.DoesNotExist:
             return Response({"status": "fail"}, status=status.HTTP_404_NOT_FOUND)
         return Response({"status": "success"}, status=status.HTTP_200_OK)
+
+class CampaignListProposal(generics.ListAPIView):
+    """
+    GET     api/admin/proposals/      -  List of Pending Proposal Campaigns
+    """
+    permission_classes = [permissions.IsAdminUser]
+    queryset = Campaign.objects.filter(status="PENDING")
+    serializer_class = CampaignListProposalSerializer
+
+class CampaignListProposalById(generics.RetrieveUpdateAPIView):
+    """
+    GET     api/admin/proposals/<id>/  - Details of current Pending Proposal Campaign
+    PATCH   api/admin/proposals/<id>/  - Verify (status) proposal request by id
+    """
+    permission_classes = [permissions.IsAdminUser]
+    queryset = Campaign.objects.filter(status="PENDING")
+    serializer_class = CampaignListProposalByIdSerializer
+    def get(self, request, pk):
+        try:
+            campaign = Campaign.objects.get(pk=pk)
+            serializer = self.get_serializer(campaign, many=False)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except Campaign.DoesNotExist:
+            return Response({"status": "campaign doesn't exist"}, status=status.HTTP_404_NOT_FOUND)
+    
+    def patch(self, request, pk):
+        try:
+            campaign = Campaign.objects.get(pk=pk)
+            serializer = self.get_serializer(campaign, many=False)
+            if serializer.is_valid():
+                serializer.update()
+            return Response({"success": "status updated successfully"}, status=status.HTTP_204_NO_CONTENT)
+        except Campaign.DoesNotExist:
+            return Response({"status": "campaign doesn't exist"}, status=status.HTTP_404_NOT_FOUND)
