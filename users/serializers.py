@@ -1,7 +1,7 @@
 from rest_framework import serializers
 
 from .models import User
-
+from campaign.models import Campaign
 
 class RegisterSerializer(serializers.ModelSerializer):
     proposal_text = serializers.CharField(
