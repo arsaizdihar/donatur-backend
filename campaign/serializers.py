@@ -38,7 +38,7 @@ class CampaignListProposalSerializer(serializers.ModelSerializer):
         model = Campaign
         fields = ('id', 'title', 'description', 'target_amount',
                   'created_at', 'status', 'fundraiser', 'image_url')
-        read_only_fields = ('id', 'title', 'description', 'amount', 'target_amount',
+        read_only_fields = ('id', 'title', 'description', 'target_amount',
                   'created_at', 'fundraiser', 'image_url')
 
 class CampaignListProposalByIdSerializer(serializers.ModelSerializer):
