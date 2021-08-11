@@ -18,15 +18,16 @@ class CampaignList(generics.ListAPIView):
     """
     queryset = Campaign.objects.filter(status="VERIFIED")
     serializer_class = CampaignListSerializer
+
 class CampaignListFundraiser(generics.ListCreateAPIView):
     """
     Allowed Method: GET, POST
     GET     api/fundraiser/campaigns/ - List Campaign from particular fundraiser
-    POST    api/fundraiser/campaigns/ - Create Campaign to particular fundraiser (explicit)
+    POST    api/fundraiser/campaigns/ - Create Campaign to particular fundraiser
     """
     permission_classes = [
         isFundraiser,
-        permissions.IsAuthenticatedOrReadOnly
+        permissions.IsAuthenticated
     ]
     queryset = Campaign.objects.all()
     serializer_class = CampaignListFundraiserSerializer
@@ -47,10 +48,10 @@ class CampaignListFundraiser(generics.ListCreateAPIView):
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-
 class CampaignListFundraiserById(generics.RetrieveDestroyAPIView):
     """
-    GET     api/fundraiser/campaigns/<id>/ - Retrieve Campaign by id to withdraw the amount
+    Allowed Method: GET, DELETE
+    GET     api/fundraiser/campaigns/<id>/ - Retrieve Campaign by id
     DELETE  api/fundraiser/campaigns/<id>/ - Delete Campaign by id
     """
     permission_classes = [
@@ -76,22 +77,40 @@ class CampaignListFundraiserById(generics.RetrieveDestroyAPIView):
             return Response({"status": "fail"}, status=status.HTTP_404_NOT_FOUND)
         return Response({"status": "success"}, status=status.HTTP_200_OK)
 
-class CampaignListProposal(generics.ListAPIView):
+class CampaignListProposal(generics.ListAPIView, generics.UpdateAPIView):
     """
-    GET     api/admin/proposals/      -  List of Pending Proposal Campaigns
+    Allowed Method: GET, PUT, PATCH
+    GET          api/admin/proposals/ - List of Pending Proposal Campaigns
+    PUT, PATCH   api/admin/proposals/ - Verify campaign proposal by campaign id
     """
     permission_classes = [permissions.IsAdminUser]
     queryset = Campaign.objects.filter(status="PENDING")
     serializer_class = CampaignListProposalSerializer
 
+    def update(self, request, *args, **kwargs):
+        try:
+            campaign_id = request.data.get("id")
+            campaign = Campaign.objects.get(id=campaign_id)
+            campaign.status = request.data.get("status")
+            campaign.save()
+
+            serializer = self.get_serializer(data=campaign, many=False)
+            if serializer.is_valid():
+                serializer.update()
+            return Response({"success": "status updated successfully"}, status=status.HTTP_204_NO_CONTENT)
+        except Campaign.DoesNotExist:
+            return Response({"status": "campaign doesn't exist"}, status=status.HTTP_404_NOT_FOUND)
+
 class CampaignListProposalById(generics.RetrieveUpdateAPIView):
     """
-    GET     api/admin/proposals/<id>/  - Details of current Pending Proposal Campaign
-    PATCH   api/admin/proposals/<id>/  - Verify (status) proposal request by id
+    Allowed Method: GET, PUT, PATCH
+    GET          api/admin/proposals/<id>/ - Details of current Pending Proposal Campaign
+    PUT, PATCH   api/admin/proposals/<id>/ - Verify (status) proposal request by id
     """
     permission_classes = [permissions.IsAdminUser]
     queryset = Campaign.objects.filter(status="PENDING")
     serializer_class = CampaignListProposalByIdSerializer
+
     def get(self, request, pk):
         try:
             campaign = Campaign.objects.get(pk=pk)
@@ -100,10 +119,13 @@ class CampaignListProposalById(generics.RetrieveUpdateAPIView):
         except Campaign.DoesNotExist:
             return Response({"status": "campaign doesn't exist"}, status=status.HTTP_404_NOT_FOUND)
     
-    def patch(self, request, pk):
+    def update(self, request, pk, *args, **kwargs):
         try:
             campaign = Campaign.objects.get(pk=pk)
-            serializer = self.get_serializer(campaign, many=False)
+            campaign.status = request.data.get("status")
+            campaign.save()
+
+            serializer = self.get_serializer(data=campaign, many=False)
             if serializer.is_valid():
                 serializer.update()
             return Response({"success": "status updated successfully"}, status=status.HTTP_204_NO_CONTENT)
