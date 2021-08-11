@@ -5,9 +5,12 @@ from .models import TopUpHistory
 
 
 class TopUpRequestSerializer(serializers.ModelSerializer):
+    amount = serializers.IntegerField(min_value=5000, required=True)
+
     class Meta:
         model = TopUpHistory
-        fields = ('amount', 'bank_name', 'bank_account', 'bank_account_number')
+        fields = "__all__"
+        read_only_fields = ('id', 'date', 'status', 'user')
 
 
 class TopUpRequestListSerializer(serializers.ModelSerializer):

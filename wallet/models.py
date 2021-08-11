@@ -11,8 +11,8 @@ class TopUpHistory(models.Model):
     amount = models.PositiveIntegerField(
         verbose_name="Top Up Amount", default=0)
 
-    verified = models.BooleanField(
-        verbose_name="Top Up Verified", default=False)
+    status = models.CharField(verbose_name="Top Up Status", max_length=25, choices=(
+        ("PENDING", "PENDING"), ("VERIFIED", "VERIFIED"), ("REJECTED", "REJECTED")), default="PENDING")
 
     bank_name = models.CharField(max_length=255)
     bank_account = models.CharField(max_length=255)
@@ -20,12 +20,17 @@ class TopUpHistory(models.Model):
         max_length=255, validators=(RegexValidator(r'^[0-9]+$', "Number only"), ))
 
     def verify(self):
-        if not self.verified:
-            self.verified = True
+        if self.status == "PENDING":
+            self.status = "VERIFIED"
             self.save()
             user = self.user
             user.wallet_amount += self.amount
             user.save()
+
+    def reject(self):
+        if self.status == "PENDING":
+            self.status = "REJECTED"
+            self.save()
 
     def __str__(self) -> str:
         return f"{self.user.id} {self.date}"

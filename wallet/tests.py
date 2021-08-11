@@ -59,6 +59,23 @@ class TopUpViewTests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
+    def test_top_up_list(self):
+        data = self.data
+        self.client.post(
+            self.REQUEST_URL, data=data, **self.user_bearer_token)
+        self.client.post(
+            self.REQUEST_URL, data=data, **self.user_bearer_token)
+        response = self.client.get(self.REQUEST_URL, **self.user_bearer_token)
+        res_data = response.json()
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(res_data), 2)
+
+        top_up_res = res_data[0]
+        keys = ("id", "status", "date", "amount", "bank_name",
+                "bank_account", "bank_account_number")
+        for key in keys:
+            self.assertIn(key, top_up_res)
+
     def test_fundraiser_role(self):
         user = self.user
         user.role = "FUNDRAISER"
@@ -79,10 +96,11 @@ class TopUpViewTests(APITestCase):
         top_up_id = self.top_up_request.id
 
         response = self.client.patch(
-            self.VERIFY_URL, {"id": top_up_id}, **self.admin_bearer_token)
+            self.VERIFY_URL, {"id": top_up_id, "status": "VERIFIED"}, **self.admin_bearer_token)
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertTrue(TopUpHistory.objects.get(id=top_up_id).verified)
+        self.assertEqual(TopUpHistory.objects.get(
+            id=top_up_id).status, "VERIFIED")
         self.assertEqual(User.objects.get(
             id=self.user.id).wallet_amount, 100000)
 
@@ -100,16 +118,22 @@ class TopUpViewTests(APITestCase):
 
     def test_invalid_id(self):
         response = self.client.patch(
-            self.VERIFY_URL, {"id": "123"}, **self.admin_bearer_token)
+            self.VERIFY_URL, {"id": "123", "status": "VERIFIED"}, **self.admin_bearer_token)
 
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_invalid_status(self):
+        response = self.client.patch(
+            self.VERIFY_URL, {"id": "123"}, **self.admin_bearer_token)
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_verify_verified_top_up(self):
         top_up = self.top_up_request
         top_up.verify()
 
         response = self.client.patch(
-            self.VERIFY_URL, {"id": top_up.id}, **self.admin_bearer_token)
+            self.VERIFY_URL, {"id": top_up.id, "status": "VERIFIED"}, **self.admin_bearer_token)
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
@@ -131,3 +155,22 @@ class TopUpViewTests(APITestCase):
             self.VERIFY_URL, {"id": top_up_id}, **self.user_bearer_token)
 
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_reject_top_up(self):
+        top_up_id = self.top_up_request.id
+        response = self.client.patch(
+            self.VERIFY_URL, {"id": top_up_id, "status": "REJECTED"}, **self.admin_bearer_token)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(TopUpHistory.objects.get(
+            id=top_up_id).status, "REJECTED")
+
+    def test_reject_rejected_top_up(self):
+        top_up = self.top_up_request
+        top_up.reject()
+
+        response = self.client.patch(
+            self.VERIFY_URL, {"id": top_up.id, "status": "REJECTED"}, **self.admin_bearer_token)
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.json().get("code"), "rejected")
