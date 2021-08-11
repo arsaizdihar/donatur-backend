@@ -119,7 +119,7 @@ class CampaignListProposalById(generics.RetrieveUpdateAPIView):
         except Campaign.DoesNotExist:
             return Response({"status": "campaign doesn't exist"}, status=status.HTTP_404_NOT_FOUND)
     
-    def update(self, request, pk):
+    def update(self, request, pk, *args, **kwargs):
         try:
             campaign = Campaign.objects.get(pk=pk)
             campaign.status = request.data.get("status")
