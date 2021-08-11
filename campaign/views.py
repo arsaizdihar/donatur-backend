@@ -24,7 +24,7 @@ class CampaignListFundraiser(generics.ListCreateAPIView):
     """
     Allowed Method: GET, POST
     GET     api/fundraiser/campaigns/ - List Campaign from particular fundraiser
-    POST    api/fundraiser/campaigns/ - Create Campaign to particular fundraiser (explicit)
+    POST    api/fundraiser/campaigns/ - Create Campaign to particular fundraiser
     """
     permission_classes = [
         isFundraiser,
@@ -51,7 +51,7 @@ class CampaignListFundraiser(generics.ListCreateAPIView):
 
 class CampaignListFundraiserById(generics.RetrieveDestroyAPIView):
     """
-    GET     api/fundraiser/campaigns/<id>/ - Retrieve Campaign by id to withdraw the amount
+    GET     api/fundraiser/campaigns/<id>/ - Retrieve Campaign by id
     DELETE  api/fundraiser/campaigns/<id>/ - Delete Campaign by id
     """
     permission_classes = [
@@ -79,14 +79,14 @@ class CampaignListFundraiserById(generics.RetrieveDestroyAPIView):
 
 class CampaignListProposal(generics.ListAPIView, generics.UpdateAPIView):
     """
-    GET     api/admin/proposals/   -  List of Pending Proposal Campaigns
-    PUT     api/admin/proposals/   - Verify campaign proposal by campaign id
+    GET          api/admin/proposals/ - List of Pending Proposal Campaigns
+    PUT, PATCH   api/admin/proposals/ - Verify campaign proposal by campaign id
     """
     permission_classes = [permissions.IsAdminUser]
     queryset = Campaign.objects.filter(status="PENDING")
     serializer_class = CampaignListProposalSerializer
 
-    def put(self, request):
+    def update(self, request, *args, **kwargs):
         try:
             campaign_id = request.data.get("id")
             campaign = Campaign.objects.get(id=campaign_id)
@@ -102,8 +102,8 @@ class CampaignListProposal(generics.ListAPIView, generics.UpdateAPIView):
 
 class CampaignListProposalById(generics.RetrieveUpdateAPIView):
     """
-    GET     api/admin/proposals/<id>/  - Details of current Pending Proposal Campaign
-    PUT     api/admin/proposals/<id>/  - Verify (status) proposal request by id
+    GET          api/admin/proposals/<id>/ - Details of current Pending Proposal Campaign
+    PUT, PATCH   api/admin/proposals/<id>/ - Verify (status) proposal request by id
     """
     permission_classes = [permissions.IsAdminUser]
     queryset = Campaign.objects.filter(status="PENDING")
@@ -117,7 +117,7 @@ class CampaignListProposalById(generics.RetrieveUpdateAPIView):
         except Campaign.DoesNotExist:
             return Response({"status": "campaign doesn't exist"}, status=status.HTTP_404_NOT_FOUND)
     
-    def put(self, request, pk):
+    def update(self, request, pk):
         try:
             campaign = Campaign.objects.get(pk=pk)
             campaign.status = request.data.get("status")
