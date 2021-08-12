@@ -391,5 +391,5 @@ class DonationViewTests(APITestCase):
         response = self.client.get(url, format="json", **self.bearer_token)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-        # self.assertEqual(DonationHistory.objects.filter(user=self.user).count(), 1)
-        # self.assertEqual(DonationHistory.objects.filter(user=self.user2).count(), 0)
+        self.assertEqual(DonationHistory.objects.filter(user=self.user).count(), 1)
+        self.assertEqual(DonationHistory.objects.filter(user=self.user2).count(), 0)
