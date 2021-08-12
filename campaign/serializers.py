@@ -5,11 +5,19 @@ from campaign.models import Campaign
 
 
 class CampaignListSerializer(serializers.ModelSerializer):
+    fundraiser = serializers.SerializerMethodField(
+        required=False, read_only=True)
 
     class Meta:
         model = Campaign
         fields = ('id', 'title', 'description', 'amount', 'target_amount',
                   'created_at', 'status', 'fundraiser', 'image_url')
+
+    def get_fundraiser(self, obj):
+        fundraiser = getattr(obj, "fundraiser", None)
+        if not fundraiser:
+            return
+        return {"full_name": fundraiser.get_full_name(), "email": fundraiser.email}
 
 
 class DonationSerializer(serializers.ModelSerializer):
@@ -47,7 +55,7 @@ class CampaignListFundraiserSerializer(serializers.ModelSerializer):
         fundraiser = getattr(obj, "fundraiser", None)
         if not fundraiser:
             return
-        return {"full_name": obj.fundraiser.get_full_name(), "email": obj.fundraiser.email}
+        return {"full_name": fundraiser.get_full_name(), "email": fundraiser.email}
 
 
 class CampaignListFundraiserByIdSerializer(serializers.ModelSerializer):
@@ -59,7 +67,10 @@ class CampaignListFundraiserByIdSerializer(serializers.ModelSerializer):
                   'created_at', 'status', 'fundraiser', 'image_url')
 
     def get_fundraiser(self, obj):
-        return {"full_name": obj.fundraiser.get_full_name(), "email": obj.fundraiser.email}
+        fundraiser = getattr(obj, "fundraiser", None)
+        if not fundraiser:
+            return
+        return {"full_name": fundraiser.get_full_name(), "email": fundraiser.email}
 
 
 class CampaignListProposalSerializer(serializers.ModelSerializer):
@@ -73,7 +84,10 @@ class CampaignListProposalSerializer(serializers.ModelSerializer):
                             'created_at', 'fundraiser', 'image_url')
 
     def get_fundraiser(self, obj):
-        return {"full_name": obj.fundraiser.get_full_name(), "email": obj.fundraiser.email}
+        fundraiser = getattr(obj, "fundraiser", None)
+        if not fundraiser:
+            return
+        return {"full_name": fundraiser.get_full_name(), "email": fundraiser.email}
 
 
 class CampaignListProposalByIdSerializer(serializers.ModelSerializer):
@@ -87,4 +101,7 @@ class CampaignListProposalByIdSerializer(serializers.ModelSerializer):
                             'created_at', 'fundraiser', 'image_url')
 
     def get_fundraiser(self, obj):
-        return {"full_name": obj.fundraiser.get_full_name(), "email": obj.fundraiser.email}
+        fundraiser = getattr(obj, "fundraiser", None)
+        if not fundraiser:
+            return
+        return {"full_name": fundraiser.get_full_name(), "email": fundraiser.email}
