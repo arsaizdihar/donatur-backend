@@ -1,19 +1,16 @@
 from rest_framework import generics, permissions, status
 from rest_framework.response import Response
-from users.permissions import isFundraiser, IsDonatur
-
+from users.permissions import IsDonatur, isFundraiser
 from wallet.models import DonationHistory
-from .models import Campaign
 
-from .serializers import (
-    CampaignListSerializer, 
-    CampaignListFundraiserSerializer, 
-    CampaignListFundraiserByIdSerializer,
-    CampaignListProposalSerializer,
-    CampaignListProposalByIdSerializer,
-    DonationSerializer,
-    DonationViewSerializer,
-)
+from .models import Campaign
+from .serializers import (CampaignListFundraiserByIdSerializer,
+                          CampaignListFundraiserSerializer,
+                          CampaignListProposalByIdSerializer,
+                          CampaignListProposalSerializer,
+                          CampaignListSerializer, DonationSerializer,
+                          DonationViewSerializer)
+
 
 class CampaignList(generics.ListAPIView):
     """
@@ -22,6 +19,7 @@ class CampaignList(generics.ListAPIView):
     """
     queryset = Campaign.objects.filter(status="VERIFIED")
     serializer_class = CampaignListSerializer
+
 
 class CampaignListDonorById(generics.RetrieveAPIView, generics.CreateAPIView):
     """
@@ -51,8 +49,8 @@ class CampaignListDonorById(generics.RetrieveAPIView, generics.CreateAPIView):
         serializer = DonationSerializer(data=data)
         amount = data.get('amount', 0)
         is_valid = serializer.is_valid()
-        password = serializer.data.pop("password", "")
-
+        serializer_data = dict(serializer.data)
+        password = serializer_data.pop("password", "")
         if not user.wallet_amount >= amount:
             return Response({"status": "Unable to process payment: Your wallet is low."}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -60,16 +58,19 @@ class CampaignListDonorById(generics.RetrieveAPIView, generics.CreateAPIView):
             return Response({"status": "Your contribution exceeds target of donation program."}, status=status.HTTP_400_BAD_REQUEST)
 
         if not user.check_password(password):
-            return Response({"status": "Password didn't match."}, status=status.HTTP_400_BAD_REQUEST)            
-        print(serializer.data)
-        DonationHistory.objects.create(**serializer.data, user=user, campaign=campaign)
-        user.wallet_amount -= amount
-        user.save()
-        campaign.amount += amount
-        campaign.save()
-        return Response({"status": "Donation successfully transferred to campaign."}, status=status.HTTP_201_CREATED)
+            return Response({"status": "Password didn't match."}, status=status.HTTP_400_BAD_REQUEST)
+
+        if is_valid:
+            DonationHistory.objects.create(
+                **serializer_data, user=user, campaign=campaign)
+            user.wallet_amount -= amount
+            user.save()
+            campaign.amount += amount
+            campaign.save()
+            return Response({"status": "Donation successfully transferred to campaign."}, status=status.HTTP_201_CREATED)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 
 class DonationView(generics.ListAPIView):
     """
@@ -84,6 +85,7 @@ class DonationView(generics.ListAPIView):
 
     def get_queryset(self):
         return DonationHistory.objects.filter(user=self.request.user)
+
 
 class CampaignListFundraiser(generics.ListCreateAPIView):
     """
@@ -111,10 +113,13 @@ class CampaignListFundraiser(generics.ListCreateAPIView):
         serializer = self.get_serializer(data=data)
 
         if serializer.is_valid():
-            Campaign.objects.create(**serializer.data, fundraiser=request.user)
+            serializer_data = dict(serializer.data)
+            serializer_data.pop("fundraiser", None)
+            Campaign.objects.create(**serializer_data, fundraiser=request.user)
             return Response({"status": "successfully create a new donation program."}, status=status.HTTP_201_CREATED)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 
 class CampaignListFundraiserById(generics.RetrieveDestroyAPIView, generics.CreateAPIView):
     """
@@ -145,6 +150,7 @@ class CampaignListFundraiserById(generics.RetrieveDestroyAPIView, generics.Creat
             return Response({"status": "delete failed. Campaign doesn't exist."}, status=status.HTTP_404_NOT_FOUND)
         return Response({"status": "success"}, status=status.HTTP_200_OK)
 
+
 class CampaignListProposal(generics.ListAPIView, generics.UpdateAPIView):
     """
     Allowed Method: GET, PUT, PATCH
@@ -169,6 +175,7 @@ class CampaignListProposal(generics.ListAPIView, generics.UpdateAPIView):
         except Campaign.DoesNotExist:
             return Response({"status": "campaign doesn't exist."}, status=status.HTTP_404_NOT_FOUND)
 
+
 class CampaignListProposalById(generics.RetrieveUpdateAPIView):
     """
     Allowed Method: GET, PUT, PATCH
@@ -186,6 +193,7 @@ class CampaignListProposalById(generics.RetrieveUpdateAPIView):
             return Response(serializer.data, status=status.HTTP_200_OK)
         except Campaign.DoesNotExist:
             return Response({"status": "campaign doesn't exist."}, status=status.HTTP_404_NOT_FOUND)
+
     def update(self, request, pk, *args, **kwargs):
         try:
             campaign = Campaign.objects.get(pk=pk)

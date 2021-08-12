@@ -4,9 +4,9 @@ from rest_framework import status
 from rest_framework.test import APIClient, APITestCase
 from rest_framework_simplejwt.tokens import RefreshToken
 from users.models import User
+from wallet.models import DonationHistory
 
 from campaign.models import Campaign
-from wallet.models import DonationHistory
 
 
 class CampaignFundraiserViewTests(APITestCase):
@@ -130,7 +130,10 @@ class CampaignFundraiserViewTests(APITestCase):
             "created_at")), campaign.created_at)
 
         self.assertEqual(data.get(
-            "fundraiser"), self.user.get_full_name())
+            "fundraiser", {}).get("full_name"), self.user.get_full_name())
+
+        self.assertEqual(data.get(
+            "fundraiser", {}).get("email"), self.user.email)
 
     def test_get_fundraiser_invalid_id(self):
         url = f"{self.BASE_URL}/99/"
@@ -147,6 +150,7 @@ class CampaignFundraiserViewTests(APITestCase):
         url = f"{self.BASE_URL}/99/"
         response = self.client.delete(url, format="json", **self.bearer_token)
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
 
 class VerifyCampaignViewTests(APITestCase):
     BASE_URL = "http://127.0.0.1:8000/api/admin/proposals"
@@ -180,7 +184,7 @@ class VerifyCampaignViewTests(APITestCase):
     def admin_bearer_token(self):
         refresh = RefreshToken.for_user(self.admin)
         return {"HTTP_AUTHORIZATION": f'Bearer {refresh.access_token}'}
-    
+
     @property
     def user_bearer_token(self):
         refresh = RefreshToken.for_user(self.user)
@@ -190,7 +194,7 @@ class VerifyCampaignViewTests(APITestCase):
         url = f"{self.BASE_URL}/"
         response = self.client.get(url, **self.admin_bearer_token)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-    
+
     def test_get_all_pending_campaign_not_admin(self):
         url = f"{self.BASE_URL}/"
         response = self.client.get(url, **self.user_bearer_token)
@@ -201,7 +205,7 @@ class VerifyCampaignViewTests(APITestCase):
         url = f"{self.BASE_URL}/{data.id}/"
         response = self.client.get(url, **self.admin_bearer_token)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-    
+
     def test_get_pending_campaign_by_id_not_admin(self):
         data = self.make_campaign
         url = f"{self.BASE_URL}/{data.id}/"
@@ -216,10 +220,12 @@ class VerifyCampaignViewTests(APITestCase):
     def test_get_pending_campaign_wrong_method(self):
         url = f"{self.BASE_URL}/"
         response = self.client.delete(url, **self.admin_bearer_token)
-        self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
-        
+        self.assertEqual(response.status_code,
+                         status.HTTP_405_METHOD_NOT_ALLOWED)
+
         response = self.client.post(url, **self.admin_bearer_token)
-        self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+        self.assertEqual(response.status_code,
+                         status.HTTP_405_METHOD_NOT_ALLOWED)
 
     def test_wrong_url(self):
         url = f"{self.BASE_URL}/xx/"
@@ -234,9 +240,11 @@ class VerifyCampaignViewTests(APITestCase):
     def test_verify_proposal_campaign(self):
         url = f"{self.BASE_URL}/"
         proposal_campaign = self.make_campaign
-        verify_proposal_campaign = {"id": proposal_campaign.id, "status": "VERIFIED"}
+        verify_proposal_campaign = {
+            "id": proposal_campaign.id, "status": "VERIFIED"}
 
-        response = self.client.put(url, verify_proposal_campaign, **self.admin_bearer_token)
+        response = self.client.put(
+            url, verify_proposal_campaign, **self.admin_bearer_token)
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         proposal_campaign = Campaign.objects.first()
         self.assertEqual(proposal_campaign.status, "VERIFIED")
@@ -244,9 +252,11 @@ class VerifyCampaignViewTests(APITestCase):
     def test_reject_proposal_campaign(self):
         url = f"{self.BASE_URL}/"
         proposal_campaign = self.make_campaign
-        verify_proposal_campaign = {"id": proposal_campaign.id, "status": "REJECTED"}
+        verify_proposal_campaign = {
+            "id": proposal_campaign.id, "status": "REJECTED"}
 
-        response = self.client.put(url, verify_proposal_campaign, **self.admin_bearer_token)
+        response = self.client.put(
+            url, verify_proposal_campaign, **self.admin_bearer_token)
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         proposal_campaign = Campaign.objects.first()
         self.assertEqual(proposal_campaign.status, "REJECTED")
@@ -256,7 +266,8 @@ class VerifyCampaignViewTests(APITestCase):
         url = f"{self.BASE_URL}/{data.id}/"
         verify_proposal_campaign = {"id": data.id, "status": "VERIFIED"}
 
-        response = self.client.put(url, verify_proposal_campaign, **self.admin_bearer_token)
+        response = self.client.put(
+            url, verify_proposal_campaign, **self.admin_bearer_token)
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         proposal_campaign = Campaign.objects.first()
         self.assertEqual(proposal_campaign.status, "VERIFIED")
@@ -266,7 +277,8 @@ class VerifyCampaignViewTests(APITestCase):
         url = f"{self.BASE_URL}/{data.id}/"
         verify_proposal_campaign = {"id": data.id, "status": "REJECTED"}
 
-        response = self.client.put(url, verify_proposal_campaign, **self.admin_bearer_token)
+        response = self.client.put(
+            url, verify_proposal_campaign, **self.admin_bearer_token)
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         proposal_campaign = Campaign.objects.first()
         self.assertEqual(proposal_campaign.status, "REJECTED")
@@ -276,15 +288,18 @@ class VerifyCampaignViewTests(APITestCase):
         url = f"{self.BASE_URL}/2/"
         verify_proposal_campaign = {"id": data.id, "status": "VERIFIED"}
 
-        response = self.client.put(url, verify_proposal_campaign, **self.admin_bearer_token)
+        response = self.client.put(
+            url, verify_proposal_campaign, **self.admin_bearer_token)
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
-            
+
     def test_verify_campaign_invalid_id(self):
         url = f"{self.BASE_URL}/"
         verify_proposal_campaign = {"id": "2", "status": "REJECTED"}
 
-        response = self.client.put(url, verify_proposal_campaign, **self.admin_bearer_token)
+        response = self.client.put(
+            url, verify_proposal_campaign, **self.admin_bearer_token)
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
 
 class DonationViewTests(APITestCase):
     BASE_URL = "http://127.0.0.1:8000/api/donor/campaigns"
@@ -312,7 +327,7 @@ class DonationViewTests(APITestCase):
         """Returns Authorization headers, which can be passed to APIClient instance."""
         refresh = RefreshToken.for_user(self.user2)
         return {"HTTP_AUTHORIZATION": f'Bearer {refresh.access_token}'}
-    
+
     @property
     def make_campaign(self):
         campaign = Campaign.objects.create(
@@ -325,7 +340,7 @@ class DonationViewTests(APITestCase):
             image_url=""
         )
         return campaign
-    
+
     def test_retrieve_campaign_by_id(self):
         data = self.make_campaign
         url = f"{self.BASE_URL}/{data.id}/"
@@ -344,7 +359,8 @@ class DonationViewTests(APITestCase):
             "amount": 6000,
             "password": "user1234"
         }
-        response = self.client.post(url, data, format="json", **self.bearer_token)
+        response = self.client.post(
+            url, data, format="json", **self.bearer_token)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
     def test_create_donation_wrong_password(self):
@@ -354,9 +370,10 @@ class DonationViewTests(APITestCase):
             "amount": 6000,
             "password": "wrong_pw"
         }
-        response = self.client.post(url, data, format="json", **self.bearer_token)
+        response = self.client.post(
+            url, data, format="json", **self.bearer_token)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-    
+
     def test_create_donation_user_wallet_lt_amount(self):
         campaign = self.make_campaign
         url = f"{self.BASE_URL}/{campaign.id}/"
@@ -364,7 +381,8 @@ class DonationViewTests(APITestCase):
             "amount": 6000,
             "password": "user1234"
         }
-        response = self.client.post(url, data, format="json", **self.bearer_token2)
+        response = self.client.post(
+            url, data, format="json", **self.bearer_token2)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_create_donation_target_amount_lt_amount(self):
@@ -374,7 +392,8 @@ class DonationViewTests(APITestCase):
             "amount": 100000,
             "password": "user1234"
         }
-        response = self.client.post(url, data, format="json", **self.bearer_token)
+        response = self.client.post(
+            url, data, format="json", **self.bearer_token)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_donation_view(self):
@@ -391,5 +410,7 @@ class DonationViewTests(APITestCase):
         response = self.client.get(url, format="json", **self.bearer_token)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-        self.assertEqual(DonationHistory.objects.filter(user=self.user).count(), 1)
-        self.assertEqual(DonationHistory.objects.filter(user=self.user2).count(), 0)
+        self.assertEqual(DonationHistory.objects.filter(
+            user=self.user).count(), 1)
+        self.assertEqual(DonationHistory.objects.filter(
+            user=self.user2).count(), 0)
