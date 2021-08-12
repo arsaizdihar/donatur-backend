@@ -1,7 +1,7 @@
 from django.core.validators import RegexValidator
 from django.db import models
 
-
+from datetime import datetime
 class TopUpHistory(models.Model):
     user = models.ForeignKey("users.User", on_delete=models.CASCADE,
                              related_name="top_up_histories", related_query_name="top_up_histories")
@@ -61,7 +61,11 @@ class DonationHistory(models.Model):
 
     date = models.DateTimeField(auto_now_add=True)
     amount = models.PositiveIntegerField(default=0)
+    password = models.CharField(max_length=8, verbose_name="Verify Password User", null=True)
     campaign = models.ForeignKey("campaign.Campaign", on_delete=models.CASCADE)
-
+    
     def __str__(self) -> str:
         return f"{self.campaign.title} {self.amount} {self.date}"
+
+    class Meta:
+        ordering = ("-date", )
