@@ -8,6 +8,7 @@ from users.models import User
 from campaign.models import Campaign
 from wallet.models import DonationHistory
 
+
 class CampaignFundraiserViewTests(APITestCase):
     BASE_URL = "http://127.0.0.1:8000/api/fundraiser/campaigns"
 
@@ -161,7 +162,7 @@ class VerifyCampaignViewTests(APITestCase):
         cls.user = User.objects.create_user(
             first_name="Te", last_name="st",
             email="user@user.com", password="user1234", role="FUNDRAISER", proposal_text="CAMPAIGN")
-
+            
     @property
     def make_campaign(self):
         campaign = Campaign.objects.create(
@@ -283,6 +284,7 @@ class VerifyCampaignViewTests(APITestCase):
         verify_proposal_campaign = {"id": "2", "status": "REJECTED"}
 
         response = self.client.put(url, verify_proposal_campaign, **self.admin_bearer_token)
+<<<<<<< HEAD
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
 class DonationViewTests(APITestCase):

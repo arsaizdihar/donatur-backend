@@ -185,7 +185,6 @@ class CampaignListProposalById(generics.RetrieveUpdateAPIView):
             return Response(serializer.data, status=status.HTTP_200_OK)
         except Campaign.DoesNotExist:
             return Response({"status": "campaign doesn't exist."}, status=status.HTTP_404_NOT_FOUND)
-    
     def update(self, request, pk, *args, **kwargs):
         try:
             campaign = Campaign.objects.get(pk=pk)
