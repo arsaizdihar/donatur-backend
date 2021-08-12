@@ -6,7 +6,7 @@ class Campaign(models.Model):
     description = models.TextField(verbose_name="Campaign Description")
 
     amount = models.PositiveIntegerField(
-        verbose_name="Top Up Amount", default=0)
+        verbose_name="Amount", default=0)
     target_amount = models.PositiveIntegerField(default=0)
 
     created_at = models.DateTimeField(auto_now_add=True)

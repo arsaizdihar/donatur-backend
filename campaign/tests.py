@@ -6,6 +6,8 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from users.models import User
 
 from campaign.models import Campaign
+from wallet.models import DonationHistory
+
 
 class CampaignFundraiserViewTests(APITestCase):
     BASE_URL = "http://127.0.0.1:8000/api/fundraiser/campaigns"
@@ -17,7 +19,7 @@ class CampaignFundraiserViewTests(APITestCase):
     def setUpTestData(cls) -> None:
         cls.user = User.objects.create_user(
             first_name="Te", last_name="st",
-            email="user@user.com", password="user1234", role="FUNDRAISER", proposal_text="CAMPAIGN")
+            email="user@user.com", password="user1234", role="FUNDRAISER", proposal_text="CAMPAIGN", verified=True)
 
     @property
     def bearer_token(self):
@@ -83,10 +85,23 @@ class CampaignFundraiserViewTests(APITestCase):
             "title": "Title",
             "description": "Description",
             "target_amount": 2000000,
-            "image_url": ""
+            "image_url": "",
         }
         response = self.client.post(url, data, **self.bearer_token)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+    def test_fundraiser_create_campaign_not_verified(self):
+        url = f"{self.BASE_URL}/"
+        data = {
+            "title": "Title",
+            "description": "Description",
+            "target_amount": 2000000,
+            "image_url": "",
+        }
+        self.user.verified = False
+        self.user.save()
+        response = self.client.post(url, data, **self.bearer_token)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_fundraiser_create_campaign_missing_field(self):
         url = f"{self.BASE_URL}/"
@@ -147,16 +162,6 @@ class VerifyCampaignViewTests(APITestCase):
         cls.user = User.objects.create_user(
             first_name="Te", last_name="st",
             email="user@user.com", password="user1234", role="FUNDRAISER", proposal_text="CAMPAIGN")
-        cls.data = {
-            "id": "1",
-            "title": "Test Title",
-            "description": "Test Desc",
-            "target_amount": 1000000,
-            "created_at": timezone.now(),
-            "status": "PENDING",
-            "fundraiser": cls.user,
-            "image_url": ""
-        }
 
     @property
     def make_campaign(self):
@@ -280,3 +285,111 @@ class VerifyCampaignViewTests(APITestCase):
 
         response = self.client.put(url, verify_proposal_campaign, **self.admin_bearer_token)
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+class DonationViewTests(APITestCase):
+    BASE_URL = "http://127.0.0.1:8000/api/donor/campaigns"
+
+    def setUp(self) -> None:
+        self.client = APIClient()
+
+    @classmethod
+    def setUpTestData(cls) -> None:
+        cls.user = User.objects.create_user(
+            first_name="Te", last_name="st",
+            email="user@user.com", password="user1234", role="DONATUR", wallet_amount=100000)
+        cls.user2 = User.objects.create_user(
+            first_name="Te", last_name="st",
+            email="user2@user2.com", password="user1234", role="DONATUR", wallet_amount=0)
+
+    @property
+    def bearer_token(self):
+        """Returns Authorization headers, which can be passed to APIClient instance."""
+        refresh = RefreshToken.for_user(self.user)
+        return {"HTTP_AUTHORIZATION": f'Bearer {refresh.access_token}'}
+
+    @property
+    def bearer_token2(self):
+        """Returns Authorization headers, which can be passed to APIClient instance."""
+        refresh = RefreshToken.for_user(self.user2)
+        return {"HTTP_AUTHORIZATION": f'Bearer {refresh.access_token}'}
+    
+    @property
+    def make_campaign(self):
+        campaign = Campaign.objects.create(
+            title="Title",
+            description="Description",
+            target_amount=10000,
+            created_at=timezone.now(),
+            status="PENDING",
+            fundraiser=self.user,
+            image_url=""
+        )
+        return campaign
+    
+    def test_retrieve_campaign_by_id(self):
+        data = self.make_campaign
+        url = f"{self.BASE_URL}/{data.id}/"
+        response = self.client.get(url, format="json", **self.bearer_token)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_retrieve_campaign_invalid_id(self):
+        url = f"{self.BASE_URL}/10/"
+        response = self.client.get(url, format="json", **self.bearer_token)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_create_donation(self):
+        campaign = self.make_campaign
+        url = f"{self.BASE_URL}/{campaign.id}/"
+        data = {
+            "amount": 6000,
+            "password": "user1234"
+        }
+        response = self.client.post(url, data, format="json", **self.bearer_token)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+    def test_create_donation_wrong_password(self):
+        campaign = self.make_campaign
+        url = f"{self.BASE_URL}/{campaign.id}/"
+        data = {
+            "amount": 6000,
+            "password": "wrong_pw"
+        }
+        response = self.client.post(url, data, format="json", **self.bearer_token)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+    
+    def test_create_donation_user_wallet_lt_amount(self):
+        campaign = self.make_campaign
+        url = f"{self.BASE_URL}/{campaign.id}/"
+        data = {
+            "amount": 6000,
+            "password": "user1234"
+        }
+        response = self.client.post(url, data, format="json", **self.bearer_token2)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_create_donation_target_amount_lt_amount(self):
+        campaign = self.make_campaign
+        url = f"{self.BASE_URL}/{campaign.id}/"
+        data = {
+            "amount": 100000,
+            "password": "user1234"
+        }
+        response = self.client.post(url, data, format="json", **self.bearer_token)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_donation_view(self):
+        campaign = self.make_campaign
+        url = f"{self.BASE_URL}/{campaign.id}/"
+        url_donate = "http://127.0.0.1:8000/api/donate/"
+
+        data = {
+            "amount": 6000,
+            "password": "user1234"
+        }
+        self.client.post(url, data, format="json", **self.bearer_token)
+
+        response = self.client.get(url, format="json", **self.bearer_token)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        self.assertEqual(DonationHistory.objects.filter(user=self.user).count(), 1)
+        self.assertEqual(DonationHistory.objects.filter(user=self.user2).count(), 0)
