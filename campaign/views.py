@@ -3,13 +3,12 @@ from rest_framework.response import Response
 from users.permissions import isFundraiser
 
 from .models import Campaign
-from .serializers import (
-    CampaignListSerializer, 
-    CampaignListFundraiserSerializer, 
-    CampaignListFundraiserByIdSerializer,
-    CampaignListProposalSerializer,
-    CampaignListProposalByIdSerializer
-)
+from .serializers import (CampaignListFundraiserByIdSerializer,
+                          CampaignListFundraiserSerializer,
+                          CampaignListProposalByIdSerializer,
+                          CampaignListProposalSerializer,
+                          CampaignListSerializer)
+
 
 class CampaignList(generics.ListAPIView):
     """
@@ -18,6 +17,7 @@ class CampaignList(generics.ListAPIView):
     """
     queryset = Campaign.objects.filter(status="VERIFIED")
     serializer_class = CampaignListSerializer
+
 
 class CampaignListFundraiser(generics.ListCreateAPIView):
     """
@@ -38,7 +38,6 @@ class CampaignListFundraiser(generics.ListCreateAPIView):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     def post(self, request):
-        request.data._mutable = True
         data = request.data
         serializer = self.get_serializer(data=data)
 
@@ -47,6 +46,7 @@ class CampaignListFundraiser(generics.ListCreateAPIView):
             return Response({"status": "success"}, status=status.HTTP_201_CREATED)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 
 class CampaignListFundraiserById(generics.RetrieveDestroyAPIView):
     """
@@ -77,6 +77,7 @@ class CampaignListFundraiserById(generics.RetrieveDestroyAPIView):
             return Response({"status": "fail"}, status=status.HTTP_404_NOT_FOUND)
         return Response({"status": "success"}, status=status.HTTP_200_OK)
 
+
 class CampaignListProposal(generics.ListAPIView, generics.UpdateAPIView):
     """
     Allowed Method: GET, PUT, PATCH
@@ -101,6 +102,7 @@ class CampaignListProposal(generics.ListAPIView, generics.UpdateAPIView):
         except Campaign.DoesNotExist:
             return Response({"status": "campaign doesn't exist"}, status=status.HTTP_404_NOT_FOUND)
 
+
 class CampaignListProposalById(generics.RetrieveUpdateAPIView):
     """
     Allowed Method: GET, PUT, PATCH
@@ -118,7 +120,7 @@ class CampaignListProposalById(generics.RetrieveUpdateAPIView):
             return Response(serializer.data, status=status.HTTP_200_OK)
         except Campaign.DoesNotExist:
             return Response({"status": "campaign doesn't exist"}, status=status.HTTP_404_NOT_FOUND)
-    
+
     def update(self, request, pk, *args, **kwargs):
         try:
             campaign = Campaign.objects.get(pk=pk)
