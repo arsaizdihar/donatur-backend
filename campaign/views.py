@@ -49,10 +49,9 @@ class CampaignListDonorById(generics.RetrieveAPIView, generics.CreateAPIView):
         user = request.user
         campaign = Campaign.objects.get(pk=pk)
         serializer = DonationSerializer(data=data)
-        amount = data['amount']
-
-        if not user.check_password(data.get('password')):
-            return Response({"status": "Password didn't match."}, status=status.HTTP_400_BAD_REQUEST)
+        amount = data.get('amount', 0)
+        is_valid = serializer.is_valid()
+        password = serializer.data.pop("password", "")
 
         if not user.wallet_amount >= amount:
             return Response({"status": "Unable to process payment: Your wallet is low."}, status=status.HTTP_400_BAD_REQUEST)
@@ -60,13 +59,15 @@ class CampaignListDonorById(generics.RetrieveAPIView, generics.CreateAPIView):
         if not campaign.target_amount >= amount:
             return Response({"status": "Your contribution exceeds target of donation program."}, status=status.HTTP_400_BAD_REQUEST)
 
-        if serializer.is_valid():
-            DonationHistory.objects.create(**serializer.data, user=request.user, campaign=campaign)
-            user.wallet_amount -= amount
-            user.save()
-            campaign.amount += amount
-            campaign.save()
-            return Response({"status": "Donation successfully transferred to campaign."}, status=status.HTTP_201_CREATED)
+        if not user.check_password(password):
+            return Response({"status": "Password didn't match."}, status=status.HTTP_400_BAD_REQUEST)            
+        print(serializer.data)
+        DonationHistory.objects.create(**serializer.data, user=user, campaign=campaign)
+        user.wallet_amount -= amount
+        user.save()
+        campaign.amount += amount
+        campaign.save()
+        return Response({"status": "Donation successfully transferred to campaign."}, status=status.HTTP_201_CREATED)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 

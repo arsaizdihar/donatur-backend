@@ -61,7 +61,6 @@ class DonationHistory(models.Model):
 
     date = models.DateTimeField(auto_now_add=True)
     amount = models.PositiveIntegerField(default=0)
-    password = models.CharField(max_length=8, verbose_name="Verify Password User", null=True)
     campaign = models.ForeignKey("campaign.Campaign", on_delete=models.CASCADE)
     
     def __str__(self) -> str:
