@@ -1,7 +1,7 @@
 from django.core.validators import RegexValidator
 from django.db import models
+from django.utils import timezone
 
-from datetime import datetime
 class TopUpHistory(models.Model):
     user = models.ForeignKey("users.User", on_delete=models.CASCADE,
                              related_name="top_up_histories", related_query_name="top_up_histories")
@@ -49,11 +49,32 @@ class WithdrawRequest(models.Model):
     verified_date = models.DateTimeField(null=True, blank=True)
 
     amount = models.PositiveIntegerField(default=0)
-    verified = models.BooleanField(default=False)
+    status = models.CharField(verbose_name="Withdraw Status", max_length=25, choices=(
+        ("PENDING", "PENDING"), ("VERIFIED", "VERIFIED"), ("REJECTED", "REJECTED")), default="PENDING")
+        
+    def verify(self):
+        if self.status == "PENDING":
+            self.status = "VERIFIED"
+            self.verified_date = timezone.now()
+            self.save()
+            user = self.user
+            user.wallet_amount += self.amount
+            user.save()
+            campaign = self.campaign
+            campaign.amount -= self.amount
+            campaign.save()
+
+    def reject(self):
+        if self.status == "PENDING":
+            self.status = "REJECTED"
+            self.verified_date = timezone.now()
+            self.save()
 
     def __str__(self) -> str:
         return f"{self.campaign.title} {self.amount} {self.request_date}"
 
+    class Meta:
+        ordering = ("-request_date", )
 
 class DonationHistory(models.Model):
     user = models.ForeignKey("users.User", on_delete=models.CASCADE,
@@ -62,7 +83,7 @@ class DonationHistory(models.Model):
     date = models.DateTimeField(auto_now_add=True)
     amount = models.PositiveIntegerField(default=0)
     campaign = models.ForeignKey("campaign.Campaign", on_delete=models.CASCADE)
-    
+
     def __str__(self) -> str:
         return f"{self.campaign.title} {self.amount} {self.date}"
 

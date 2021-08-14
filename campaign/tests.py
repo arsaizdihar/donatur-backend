@@ -4,7 +4,7 @@ from rest_framework import status
 from rest_framework.test import APIClient, APITestCase
 from rest_framework_simplejwt.tokens import RefreshToken
 from users.models import User
-from wallet.models import DonationHistory
+from wallet.models import DonationHistory, WithdrawRequest
 
 from campaign.models import Campaign
 
@@ -152,7 +152,7 @@ class CampaignFundraiserViewTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
 
-class VerifyCampaignViewTests(APITestCase):
+class CampaignVerifyViewTests(APITestCase):
     BASE_URL = "http://127.0.0.1:8000/api/admin/proposals"
 
     def setUp(self) -> None:
@@ -355,45 +355,47 @@ class DonationViewTests(APITestCase):
     def test_create_donation(self):
         campaign = self.make_campaign
         url = f"{self.BASE_URL}/{campaign.id}/"
-        data = {
+        request = {
             "amount": 6000,
             "password": "user1234"
         }
         response = self.client.post(
-            url, data, format="json", **self.bearer_token)
+            url, request, format="json", **self.bearer_token)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        user = User.objects.get(email="user@user.com")
+        self.assertEqual(user.wallet_amount, 100000 - 6000)
 
     def test_create_donation_wrong_password(self):
         campaign = self.make_campaign
         url = f"{self.BASE_URL}/{campaign.id}/"
-        data = {
+        request = {
             "amount": 6000,
             "password": "wrong_pw"
         }
         response = self.client.post(
-            url, data, format="json", **self.bearer_token)
+            url, request, format="json", **self.bearer_token)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_create_donation_user_wallet_lt_amount(self):
         campaign = self.make_campaign
         url = f"{self.BASE_URL}/{campaign.id}/"
-        data = {
+        request = {
             "amount": 6000,
             "password": "user1234"
         }
         response = self.client.post(
-            url, data, format="json", **self.bearer_token2)
+            url, request, format="json", **self.bearer_token2)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_create_donation_target_amount_lt_amount(self):
         campaign = self.make_campaign
         url = f"{self.BASE_URL}/{campaign.id}/"
-        data = {
+        request = {
             "amount": 100000,
             "password": "user1234"
         }
         response = self.client.post(
-            url, data, format="json", **self.bearer_token)
+            url, request, format="json", **self.bearer_token)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_donation_view(self):
@@ -401,11 +403,11 @@ class DonationViewTests(APITestCase):
         url = f"{self.BASE_URL}/{campaign.id}/"
         url_donate = "http://127.0.0.1:8000/api/donate/"
 
-        data = {
+        request = {
             "amount": 6000,
             "password": "user1234"
         }
-        self.client.post(url, data, format="json", **self.bearer_token)
+        self.client.post(url, request, format="json", **self.bearer_token)
 
         response = self.client.get(url, format="json", **self.bearer_token)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -414,3 +416,213 @@ class DonationViewTests(APITestCase):
             user=self.user).count(), 1)
         self.assertEqual(DonationHistory.objects.filter(
             user=self.user2).count(), 0)
+
+class WithdrawVerifyViewTests(APITestCase):
+    WITHDRAW_URL = "http://127.0.0.1:8000/api/fundraiser/campaigns"
+    VERIF_URL = "http://127.0.0.1:8000/api/withdraw/requests"
+    DONATE_URL = "http://127.0.0.1:8000/api/donor/campaigns"
+    CAMPAIGN_URL = "http://127.0.0.1:8000/api/admin/proposals"
+
+    def setUp(self) -> None:
+        self.client = APIClient()
+
+    @classmethod
+    def setUpTestData(cls) -> None:
+        cls.admin = User.objects.create_superuser(
+            email="admin@gmail.com", password="admin3231", first_name="I'm",
+            last_name="Admin")
+        cls.fundraiser = User.objects.create_user(
+            first_name="I'm", last_name="Fundraiser",
+            email="fundraiser@gmail.com", password="user1234", role="FUNDRAISER", proposal_text="CAMPAIGN", verified=True)
+        cls.donatur = User.objects.create_user(
+            first_name="I'm", last_name="Donatur",
+            email="donatur@gmail.com", password="user1234", role="DONATUR", wallet_amount=1000000)
+
+    @property
+    def admin_bearer_token(self):
+        refresh = RefreshToken.for_user(self.admin)
+        return {"HTTP_AUTHORIZATION": f'Bearer {refresh.access_token}'}
+
+    @property
+    def fundraiser_bearer_token(self):
+        refresh = RefreshToken.for_user(self.fundraiser)
+        return {"HTTP_AUTHORIZATION": f'Bearer {refresh.access_token}'}
+
+    @property
+    def donatur_bearer_token(self):
+        refresh = RefreshToken.for_user(self.donatur)
+        return {"HTTP_AUTHORIZATION": f'Bearer {refresh.access_token}'}
+
+    @property
+    def make_campaign(self):
+        campaign = Campaign.objects.create(
+            title="Title",
+            description="Description",
+            amount=0,
+            target_amount=2000000,
+            created_at=timezone.now(),
+            status="PENDING",
+            fundraiser=self.fundraiser,
+            image_url=""
+        )
+        return campaign
+
+    def test_withdraw_workflow(self):
+        campaign = self.make_campaign
+        campaign2 = self.make_campaign
+        url_verify_withdraw = f"{self.VERIF_URL}/"
+        url_verify_campaign = f"{self.CAMPAIGN_URL}/{campaign.id}/"
+        url_withdraw = f"{self.WITHDRAW_URL}/{campaign.id}/"
+        url_donate = f"{self.DONATE_URL}/{campaign.id}/"
+
+        # Verify proposal campaign from campaign
+        verify_proposal_campaign = {
+            "id": campaign.id, "status": "VERIFIED"}
+        response = self.client.put(
+            url_verify_campaign, verify_proposal_campaign, format="json",
+            **self.admin_bearer_token
+        )
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        proposal_campaign = Campaign.objects.first()
+        self.assertEqual(proposal_campaign.status, "VERIFIED")
+        
+        # Donate from Donatur user
+        data_donate = {
+            "amount": 500000,
+            "password": "user1234"
+        }
+        response = self.client.post(
+            url_donate, data_donate, format="json", **self.donatur_bearer_token)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        donatur = User.objects.get(email="donatur@gmail.com")
+        self.assertEqual(donatur.wallet_amount, 500000)
+        
+        campaign = Campaign.objects.get(id=campaign.id)
+        self.assertEqual(campaign.amount, 500000)
+
+        donation = DonationHistory.objects.first()
+        self.assertEqual(donation.amount, 500000)
+
+        # Fundraiser request for withdraw
+        request_withdraw = {
+            "amount": 300000
+        }
+        response = self.client.post(
+            url_withdraw, request_withdraw, format="json", **self.fundraiser_bearer_token)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(self.fundraiser.wallet_amount, 0)
+        
+        fundraiser = User.objects.get(email="fundraiser@gmail.com")
+        withdraw = WithdrawRequest.objects.filter(user=fundraiser)
+        self.assertEqual(withdraw.count(), 1)
+
+        """ Test REJECTED Withdraw Request """
+        verify_withdraw = {
+            "id": campaign.id, "status": "REJECTED"
+        }
+        response = self.client.put(
+            url_verify_withdraw, verify_withdraw, format="json", **self.admin_bearer_token)
+
+        withdraw = WithdrawRequest.objects.get(user=fundraiser, campaign=campaign)
+        campaign = Campaign.objects.first()
+
+        self.assertEqual(campaign.amount, 500000)
+        self.assertEqual(withdraw.status, "REJECTED")
+        self.assertEqual(self.fundraiser.wallet_amount, 0)
+        
+        # Test withdraw status already VERIFIED
+        withdraw.status = "VERIFIED"
+        withdraw.save()
+        verify_withdraw = {
+            "id": campaign.id, "status": "VERIFIED"}
+
+        response = self.client.put(
+            url_verify_withdraw, verify_withdraw, **self.admin_bearer_token)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data.get("code"), "verified")
+
+        # Test withdraw status already REJECTED
+        withdraw.status = "REJECTED"
+        withdraw.save()
+        verify_withdraw = {
+            "id": campaign.id, "status": "VERIFIED"}
+
+        response = self.client.put(
+            url_verify_withdraw, verify_withdraw, **self.admin_bearer_token)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data.get("code"), "rejected")
+
+        # Test withdrar invalid id
+        verify_withdraw = {
+            "id": "abcd", "status": "VERIFIED"}
+
+        response = self.client.put(
+            url_verify_withdraw, verify_withdraw, **self.admin_bearer_token)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data.get("code"), "invalid-id")
+
+        # Test withdrar.status not a REJECTED | VERIFIED
+        verify_withdraw = {
+            "id": campaign.id, "status": "TEST_ERROR"}
+
+        response = self.client.put(
+            url_verify_withdraw, verify_withdraw, **self.admin_bearer_token)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data.get("status"), ["Invalid status"])
+
+        """ Test VERIFIED Withdraw Request """
+        withdraw.status = "PENDING"
+        withdraw.save()
+        
+        verify_withdraw = {
+            "id": campaign.id, "status": "VERIFIED"}
+
+        response = self.client.put(
+            url_verify_withdraw, verify_withdraw, **self.admin_bearer_token)
+
+        withdraw = WithdrawRequest.objects.get(user=self.fundraiser, campaign=campaign)
+        campaign = Campaign.objects.first()
+        fundraiser = User.objects.get(email="fundraiser@gmail.com")
+
+        self.assertEqual(campaign.amount, 200000)
+        self.assertEqual(withdraw.status, "VERIFIED")
+        self.assertEqual(fundraiser.wallet_amount, 300000)
+
+    def test_fundraiser_not_verified(self):
+        fundraiser = User.objects.get(email="fundraiser@gmail.com")
+        fundraiser.verified = False
+        fundraiser.save()
+
+        campaign = self.make_campaign
+        url = f"{self.WITHDRAW_URL}/{campaign.id}/"
+        request = {
+            "amount": 0
+        }
+        response = self.client.post(
+            url, request ,**self.fundraiser_bearer_token
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data.get("status"), "fundraiser not verified.")
+
+    def test_amount_gt_campaign_amount(self):
+        campaign = self.make_campaign
+        url = f"{self.WITHDRAW_URL}/{campaign.id}/"
+        request = {
+            "amount": 50000
+        }
+        response = self.client.post(
+            url, request ,**self.fundraiser_bearer_token
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data.get("status"), "Your withdrawal exceeds the current campaign amount.")
+    
+    def test_verify_no_withdraw_id(self):
+        campaign = self.make_campaign
+        url = f"{self.VERIF_URL}/"
+        request = {
+            "status": "VERIFIED"
+        }
+        response = self.client.put(url, request, format="json", **self.admin_bearer_token)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data.get("id"), "This field is required.")
