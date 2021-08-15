@@ -51,7 +51,7 @@ class WithdrawRequest(models.Model):
     amount = models.PositiveIntegerField(default=0)
     status = models.CharField(verbose_name="Withdraw Status", max_length=25, choices=(
         ("PENDING", "PENDING"), ("VERIFIED", "VERIFIED"), ("REJECTED", "REJECTED")), default="PENDING")
-        
+
     def verify(self):
         if self.status == "PENDING":
             self.status = "VERIFIED"
@@ -61,7 +61,7 @@ class WithdrawRequest(models.Model):
             user.wallet_amount += self.amount
             user.save()
             campaign = self.campaign
-            campaign.amount -= self.amount
+            campaign.withdraw_amount -= self.amount
             campaign.save()
 
     def reject(self):

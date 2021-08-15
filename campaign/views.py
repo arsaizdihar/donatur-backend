@@ -2,6 +2,7 @@ from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from users.permissions import IsDonatur, isFundraiser
 from wallet.models import DonationHistory, WithdrawRequest
+from django.shortcuts import get_object_or_404
 
 from .models import Campaign
 from .serializers import (CampaignListFundraiserByIdSerializer,
@@ -54,11 +55,9 @@ class CampaignListDonorById(generics.RetrieveAPIView, generics.CreateAPIView):
         serializer_data = dict(serializer.data)
         amount = serializer_data.get('amount', 0)
         password = serializer_data.pop("password", "")
+
         if not user.wallet_amount >= amount:
             return Response({"status": "Unable to process payment: Your wallet is low."}, status=status.HTTP_400_BAD_REQUEST)
-
-        if not campaign.target_amount >= amount:
-            return Response({"status": "Your contribution exceeds target of donation program."}, status=status.HTTP_400_BAD_REQUEST)
 
         if not user.check_password(password):
             return Response({"status": "Password didn't match."}, status=status.HTTP_400_BAD_REQUEST)
@@ -158,14 +157,16 @@ class CampaignListFundraiserById(generics.RetrieveDestroyAPIView, generics.Creat
         serializer_data = dict(serializer.data)
         amount = serializer_data.get('amount', 0)
 
-        if not amount <= campaign.amount:
-            return Response({"status": "Your withdrawal exceeds the current campaign amount."}, status=status.HTTP_400_BAD_REQUEST)
+        if campaign.amount - campaign.withdraw_amount < amount:
+            return Response({"status": "You can't do withdraw request."}, status=status.HTTP_400_BAD_REQUEST)
 
         if is_valid:
             WithdrawRequest.objects.create(
                 **serializer.data, user=user, campaign=campaign)
+            campaign.withdraw_amount += amount
+            campaign.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
-            
+
         return Response({"status": "failed withdraw"}, status=status.HTTP_400_BAD_REQUEST)
 
     def delete(self, request, pk):
@@ -177,7 +178,7 @@ class CampaignListFundraiserById(generics.RetrieveDestroyAPIView, generics.Creat
             return Response({"status": "delete failed. Campaign doesn't exist."}, status=status.HTTP_404_NOT_FOUND)
 
 
-class WithdrawRequestView(generics.ListCreateAPIView):
+class WithdrawRequestView(generics.ListAPIView):
     """
     Allowed Method: GET
     GET         api/withdraw/ - List of Withdraw Request
@@ -206,7 +207,7 @@ class WithdrawVerifyView(generics.ListAPIView, generics.UpdateAPIView):
         data = request.data
         withdraw_id = data.get("id")
         withdraw_status = data.get("status")
-        
+
         if not withdraw_id:
             return Response({"id": "This field is required."}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -214,11 +215,11 @@ class WithdrawVerifyView(generics.ListAPIView, generics.UpdateAPIView):
             int(withdraw_id)
         except ValueError:
             return Response({"error": ["id must be a number"], "code": "invalid-id"}, status=status.HTTP_400_BAD_REQUEST)
-        
+
         if not withdraw_status or withdraw_status not in ("VERIFIED", "REJECTED"):
             return Response({"status": ["Invalid status"]}, status=status.HTTP_400_BAD_REQUEST)
 
-        withdraw = WithdrawRequest.objects.get(id=withdraw_id)
+        withdraw = get_object_or_404(WithdrawRequest, id=withdraw_id)
 
         if withdraw.status == "VERIFIED":
             return Response({"error": ["Already verified."], "code": "verified"}, status=status.HTTP_400_BAD_REQUEST)
@@ -230,7 +231,7 @@ class WithdrawVerifyView(generics.ListAPIView, generics.UpdateAPIView):
             withdraw.verify()
         elif withdraw_status == "REJECTED":
             withdraw.reject()
-            
+
         return Response({"status": "successfully verify the withdraw status."}, status=status.HTTP_204_NO_CONTENT)
 
 class CampaignListProposal(generics.ListAPIView, generics.UpdateAPIView):

@@ -63,7 +63,7 @@ class CampaignListFundraiserByIdSerializer(serializers.ModelSerializer):
     class Meta:
         model = Campaign
         fields = ('id', 'title', 'description', 'amount', 'target_amount',
-                  'created_at', 'status', 'fundraiser', 'image_url')
+                  'created_at', 'status', 'fundraiser', 'image_url', 'withdraw_amount')
 
     def get_fundraiser(self, obj):
         fundraiser = getattr(obj, "fundraiser", None)
