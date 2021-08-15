@@ -1,8 +1,7 @@
 from rest_framework import serializers
-from wallet.models import DonationHistory
+from wallet.models import DonationHistory, WithdrawRequest
 
 from campaign.models import Campaign
-
 
 class CampaignListSerializer(serializers.ModelSerializer):
     fundraiser = serializers.SerializerMethodField(
@@ -64,13 +63,39 @@ class CampaignListFundraiserByIdSerializer(serializers.ModelSerializer):
     class Meta:
         model = Campaign
         fields = ('id', 'title', 'description', 'amount', 'target_amount',
-                  'created_at', 'status', 'fundraiser', 'image_url')
+                  'created_at', 'status', 'fundraiser', 'image_url', 'withdraw_amount')
 
     def get_fundraiser(self, obj):
         fundraiser = getattr(obj, "fundraiser", None)
         if not fundraiser:
             return
         return {"full_name": fundraiser.get_full_name(), "email": fundraiser.email}
+
+
+class WithdrawSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = WithdrawRequest
+        fields = ('user', 'campaign', 'request_date', 'verified_date', 'amount', 'status')
+        read_only_fields = ('user', 'campaign', 'request_date', 'verified_date', 'status')
+
+
+class WithdrawRequestSerializer(serializers.ModelSerializer):
+    campaign = serializers.CharField(
+        source='campaign.title', required=False)
+
+    class Meta:
+        model = WithdrawRequest
+        fields = ('campaign', 'request_date', 'amount', 'status')
+
+
+class WithdrawVerifySerializer(serializers.ModelSerializer):
+    user = serializers.CharField(source="user.get_full_name", read_only=True)
+    user_email = serializers.EmailField(source="user.email", read_only=True)
+
+    class Meta:
+        model = WithdrawRequest
+        fields = '__all__'
 
 
 class CampaignListProposalSerializer(serializers.ModelSerializer):

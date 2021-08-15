@@ -19,5 +19,8 @@ class Campaign(models.Model):
 
     image_url = models.URLField(blank=True)
 
+    withdraw_amount = models.PositiveIntegerField(
+        verbose_name="Withdrawn Amount", default=0)
+
     def __str__(self):
         return f"{self.title}, {self.created_at}"
