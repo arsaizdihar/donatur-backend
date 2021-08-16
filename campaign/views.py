@@ -199,7 +199,7 @@ class WithdrawRequestView(generics.ListAPIView):
     serializer_class = WithdrawRequestSerializer
 
     def get_queryset(self):
-        WithdrawRequest.objects.filter(user=self.request.user)
+        return WithdrawRequest.objects.filter(user=self.request.user)
 
 
 class WithdrawVerifyView(generics.ListAPIView, generics.UpdateAPIView):

@@ -418,6 +418,7 @@ class DonationViewTests(APITestCase):
 
 class WithdrawVerifyViewTests(APITestCase):
     WITHDRAW_URL = "http://127.0.0.1:8000/api/fundraiser/campaigns"
+    WITHDRAW_LIST_URL = "http://127.0.0.1:8000/api/withdraw/"
     VERIF_URL = "http://127.0.0.1:8000/api/withdraw/requests"
     DONATE_URL = "http://127.0.0.1:8000/api/donor/campaigns"
     CAMPAIGN_URL = "http://127.0.0.1:8000/api/admin/proposals"
@@ -511,6 +512,10 @@ class WithdrawVerifyViewTests(APITestCase):
             url_withdraw, request_withdraw, format="json", **self.fundraiser_bearer_token)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(self.fundraiser.wallet_amount, 0)
+
+        response = self.client.get(
+            self.WITHDRAW_LIST_URL, format="json", **self.fundraiser_bearer_token)
+        self.assertEqual(len(response.json()), 1)
 
         fundraiser = User.objects.get(email="fundraiser@gmail.com")
         withdraw = WithdrawRequest.objects.filter(user=fundraiser)
