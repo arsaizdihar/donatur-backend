@@ -1,9 +1,12 @@
+from campaign.models import Campaign
 from rest_framework import serializers
 
 from .models import User
-from campaign.models import Campaign
+
 
 class RegisterSerializer(serializers.ModelSerializer):
+    password = serializers.CharField(
+        style={'input_type': 'password'}, min_length=8, required=True)
     proposal_text = serializers.CharField(required=False)
 
     class Meta:

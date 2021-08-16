@@ -151,6 +151,15 @@ class CampaignFundraiserViewTests(APITestCase):
         response = self.client.delete(url, format="json", **self.bearer_token)
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
+    def test_stop_fundraiser_campaign(self):
+        campaign = self.fundraiser_create_campaign
+        campaign.verify()
+        url = f"{self.BASE_URL}/{campaign.id}/"
+        response = self.client.patch(url, **self.bearer_token)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(Campaign.objects.get(
+            id=campaign.id).status, "STOPPED")
+
 
 class CampaignVerifyViewTests(APITestCase):
     BASE_URL = "http://127.0.0.1:8000/api/admin/proposals"
@@ -406,6 +415,7 @@ class DonationViewTests(APITestCase):
         self.assertEqual(DonationHistory.objects.filter(
             user=self.user2).count(), 0)
 
+
 class WithdrawVerifyViewTests(APITestCase):
     WITHDRAW_URL = "http://127.0.0.1:8000/api/fundraiser/campaigns"
     VERIF_URL = "http://127.0.0.1:8000/api/withdraw/requests"
@@ -504,7 +514,8 @@ class WithdrawVerifyViewTests(APITestCase):
 
         fundraiser = User.objects.get(email="fundraiser@gmail.com")
         withdraw = WithdrawRequest.objects.filter(user=fundraiser)
-        campaign = Campaign.objects.get(fundraiser=fundraiser, status="VERIFIED")
+        campaign = Campaign.objects.get(
+            fundraiser=fundraiser, status="VERIFIED")
         self.assertEqual(withdraw.count(), 1)
         self.assertEqual(campaign.withdraw_amount, 300000)
 
@@ -515,7 +526,8 @@ class WithdrawVerifyViewTests(APITestCase):
         response = self.client.put(
             url_verify_withdraw, verify_withdraw, format="json", **self.admin_bearer_token)
 
-        withdraw = WithdrawRequest.objects.get(user=fundraiser, campaign=campaign)
+        withdraw = WithdrawRequest.objects.get(
+            user=fundraiser, campaign=campaign)
         campaign = Campaign.objects.first()
 
         self.assertEqual(campaign.amount, 500000)
@@ -574,10 +586,11 @@ class WithdrawVerifyViewTests(APITestCase):
         response = self.client.put(
             url_verify_withdraw, verify_withdraw, **self.admin_bearer_token)
 
-        withdraw = WithdrawRequest.objects.get(user=self.fundraiser, campaign=campaign)
+        withdraw = WithdrawRequest.objects.get(
+            user=self.fundraiser, campaign=campaign)
         campaign = Campaign.objects.first()
         fundraiser = User.objects.get(email="fundraiser@gmail.com")
-        
+
         self.assertEqual(campaign.withdraw_amount, 0)
         self.assertEqual(withdraw.status, "VERIFIED")
         self.assertEqual(fundraiser.wallet_amount, 300000)
@@ -593,10 +606,11 @@ class WithdrawVerifyViewTests(APITestCase):
             "amount": 0
         }
         response = self.client.post(
-            url, request ,**self.fundraiser_bearer_token
+            url, request, **self.fundraiser_bearer_token
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.data.get("status"), "fundraiser not verified.")
+        self.assertEqual(response.data.get("status"),
+                         "fundraiser not verified.")
 
     def test_amount_gt_campaign_amount(self):
         campaign = self.make_campaign
@@ -605,10 +619,11 @@ class WithdrawVerifyViewTests(APITestCase):
             "amount": 50000
         }
         response = self.client.post(
-            url, request ,**self.fundraiser_bearer_token
+            url, request, **self.fundraiser_bearer_token
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.data.get("status"), "You can't do withdraw request.")
+        self.assertEqual(response.data.get("status"),
+                         "You can't do withdraw request.")
 
     def test_verify_no_withdraw_id(self):
         campaign = self.make_campaign
@@ -616,6 +631,7 @@ class WithdrawVerifyViewTests(APITestCase):
         request = {
             "status": "VERIFIED"
         }
-        response = self.client.put(url, request, format="json", **self.admin_bearer_token)
+        response = self.client.put(
+            url, request, format="json", **self.admin_bearer_token)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(response.data.get("id"), "This field is required.")

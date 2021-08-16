@@ -1,8 +1,8 @@
+from django.shortcuts import get_object_or_404
 from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from users.permissions import IsDonatur, isFundraiser
 from wallet.models import DonationHistory, WithdrawRequest
-from django.shortcuts import get_object_or_404
 
 from .models import Campaign
 from .serializers import (CampaignListFundraiserByIdSerializer,
@@ -10,9 +10,8 @@ from .serializers import (CampaignListFundraiserByIdSerializer,
                           CampaignListProposalByIdSerializer,
                           CampaignListProposalSerializer,
                           CampaignListSerializer, DonationSerializer,
-                          DonationViewSerializer, WithdrawSerializer,
-                          WithdrawVerifySerializer, WithdrawRequestSerializer
-)
+                          DonationViewSerializer, WithdrawRequestSerializer,
+                          WithdrawSerializer, WithdrawVerifySerializer)
 
 
 class CampaignList(generics.ListAPIView):
@@ -123,12 +122,13 @@ class CampaignListFundraiser(generics.ListCreateAPIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-class CampaignListFundraiserById(generics.RetrieveDestroyAPIView, generics.CreateAPIView):
+class CampaignListFundraiserById(generics.RetrieveUpdateDestroyAPIView, generics.CreateAPIView):
     """
     Allowed Method: GET, POST, DELETE
-    GET     api/fundraiser/campaigns/<int:id>/ - Retrieve Campaign by id
-    POST    api/fundraiser/campaigns/<int:id>/ - Create a withdraw
-    DELETE  api/fundraiser/campaigns/<int:id>/ - Delete Campaign by id
+    GET         api/fundraiser/campaigns/<int:id>/ - Retrieve Campaign by id
+    POST        api/fundraiser/campaigns/<int:id>/ - Create a withdraw
+    PUT, PATCH  api/fundraiser/campaigns/<int:id>/ - STOP a campaign
+    DELETE      api/fundraiser/campaigns/<int:id>/ - Delete Campaign by id
     """
     permission_classes = [
         isFundraiser,
@@ -168,6 +168,15 @@ class CampaignListFundraiserById(generics.RetrieveDestroyAPIView, generics.Creat
             return Response(serializer.data, status=status.HTTP_201_CREATED)
 
         return Response({"status": "failed withdraw"}, status=status.HTTP_400_BAD_REQUEST)
+
+    def update(self, request, pk, *args, **kwargs):
+        campaign = get_object_or_404(Campaign, id=pk, fundraiser=request.user)
+        if campaign.status == "STOPPED":
+            return Response({"status": "Campaign already stopped."}, status=status.HTTP_400_BAD_REQUEST)
+        if campaign.status != "VERIFIED":
+            return Response({"status": "Campaign is not verified."}, status=status.HTTP_400_BAD_REQUEST)
+        campaign.stop()
+        return Response({"ststus": "Campaign successfully stopped."})
 
     def delete(self, request, pk):
         try:
@@ -233,6 +242,7 @@ class WithdrawVerifyView(generics.ListAPIView, generics.UpdateAPIView):
             withdraw.reject()
 
         return Response({"status": "successfully verify the withdraw status."}, status=status.HTTP_204_NO_CONTENT)
+
 
 class CampaignListProposal(generics.ListAPIView, generics.UpdateAPIView):
     """
