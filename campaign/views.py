@@ -176,7 +176,7 @@ class CampaignListFundraiserById(generics.RetrieveUpdateDestroyAPIView, generics
         if campaign.status != "VERIFIED":
             return Response({"status": "Campaign is not verified."}, status=status.HTTP_400_BAD_REQUEST)
         campaign.stop()
-        return Response({"ststus": "Campaign successfully stopped."})
+        return Response({"status": "Campaign successfully stopped."})
 
     def delete(self, request, pk):
         try:

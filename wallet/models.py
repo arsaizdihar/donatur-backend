@@ -2,6 +2,7 @@ from django.core.validators import RegexValidator
 from django.db import models
 from django.utils import timezone
 
+
 class TopUpHistory(models.Model):
     user = models.ForeignKey("users.User", on_delete=models.CASCADE,
                              related_name="top_up_histories", related_query_name="top_up_histories")
@@ -60,14 +61,14 @@ class WithdrawRequest(models.Model):
             user = self.user
             user.wallet_amount += self.amount
             user.save()
-            campaign = self.campaign
-            campaign.withdraw_amount -= self.amount
-            campaign.save()
 
     def reject(self):
         if self.status == "PENDING":
             self.status = "REJECTED"
             self.verified_date = timezone.now()
+            campaign = self.campaign
+            campaign.withdraw_amount -= self.amount
+            campaign.save()
             self.save()
 
     def __str__(self) -> str:
@@ -75,6 +76,7 @@ class WithdrawRequest(models.Model):
 
     class Meta:
         ordering = ("-request_date", )
+
 
 class DonationHistory(models.Model):
     user = models.ForeignKey("users.User", on_delete=models.CASCADE,
