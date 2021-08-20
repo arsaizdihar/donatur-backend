@@ -27,6 +27,17 @@ class FundraiserRequestSerializer(serializers.ModelSerializer):
                             'email', 'date_joined', 'proposal_text')
 
 
+class FundraiserRequestByIdSerializer(serializers.ModelSerializer):
+    proposal_text = serializers.CharField(source="fundraiser_proposal.text")
+
+    class Meta:
+        model = User
+        fields = ('first_name', 'last_name',
+                  'email', 'date_joined', 'proposal_text')
+        read_only_fields = ('first_name', 'last_name',
+                            'email', 'date_joined', 'proposal_text')
+
+
 class MeSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
