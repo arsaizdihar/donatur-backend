@@ -1,8 +1,9 @@
 from django.shortcuts import get_object_or_404
-from rest_framework import generics, permissions, status
+from rest_framework import generics, permissions, status, views
 from rest_framework.response import Response
+from users.models import User
 from users.permissions import IsDonatur, isFundraiser
-from wallet.models import DonationHistory, WithdrawRequest
+from wallet.models import DonationHistory, TopUpHistory, WithdrawRequest
 
 from .models import Campaign
 from .serializers import (CampaignListFundraiserByIdSerializer,
@@ -299,3 +300,22 @@ class CampaignListProposalById(generics.RetrieveUpdateAPIView):
             return Response({"status": "campaign status updated successfully."}, status=status.HTTP_204_NO_CONTENT)
         except Campaign.DoesNotExist:
             return Response({"status": "campaign doesn't exist."}, status=status.HTTP_404_NOT_FOUND)
+
+
+class NotificationCountView(views.APIView):
+    """
+    Allowed Method: GET
+    GET     api/admin/notification/     get notification count of each type
+    """
+
+    permission_classes = (permissions.IsAdminUser, )
+
+    def get(self, request, format=None):
+        top_up_count = TopUpHistory.objects.filter(status="PENDING").count()
+        fundraiser_request_count = User.objects.filter(
+            role="FUNDRAISER", verified=False).count()
+        new_campaign_count = Campaign.objects.filter(status="PENDING").count()
+        withdraw_request_count = WithdrawRequest.objects.filter(
+            status="PENDING").count()
+
+        return Response({"top_up": top_up_count, "fundraiser_request": fundraiser_request_count, "new_campaign": new_campaign_count, "withdraw_request": withdraw_request_count})

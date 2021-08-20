@@ -22,6 +22,9 @@ class Campaign(models.Model):
     withdraw_amount = models.PositiveIntegerField(
         verbose_name="Withdrawn Amount", default=0)
 
+    class Meta:
+        ordering = ('-created_at', )
+
     def verify(self):
         if self.status == "PENDING":
             self.status = "VERIFIED"

@@ -483,7 +483,7 @@ class WithdrawVerifyViewTests(APITestCase):
             **self.admin_bearer_token
         )
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
-        proposal_campaign = Campaign.objects.first()
+        proposal_campaign = Campaign.objects.get(id=campaign.id)
         self.assertEqual(proposal_campaign.status, "VERIFIED")
 
         """  Donate from Donatur user """
@@ -533,12 +533,12 @@ class WithdrawVerifyViewTests(APITestCase):
 
         withdraw = WithdrawRequest.objects.get(
             user=fundraiser, campaign=campaign)
-        campaign = Campaign.objects.first()
+        campaign = Campaign.objects.get(id=campaign.id)
 
         self.assertEqual(campaign.amount, 500000)
         self.assertEqual(withdraw.status, "REJECTED")
         self.assertEqual(self.fundraiser.wallet_amount, 0)
-        self.assertEqual(campaign.withdraw_amount, 300000)
+        self.assertEqual(campaign.withdraw_amount, 0)
 
         """ Test withdraw status already VERIFIED """
         withdraw.status = "VERIFIED"
@@ -640,3 +640,33 @@ class WithdrawVerifyViewTests(APITestCase):
             url, request, format="json", **self.admin_bearer_token)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(response.data.get("id"), "This field is required.")
+
+
+class NotificationViewTests(APITestCase):
+    URL = "http://127.0.0.1:8000/api/admin/notification/"
+
+    @classmethod
+    def setUpTestData(cls) -> None:
+        cls.admin = User.objects.create_superuser(
+            email="admin@gmail.com", password="admin3231", first_name="I'm",
+            last_name="Admin")
+
+    @property
+    def admin_bearer_token(self):
+        refresh = RefreshToken.for_user(self.admin)
+        return {"HTTP_AUTHORIZATION": f'Bearer {refresh.access_token}'}
+
+    def test_notification(self):
+        fundraiser = User.objects.create_user(
+            first_name="I'm", last_name="Fundraiser",
+            email="fundraiser@gmail.com", password="user1234", role="FUNDRAISER", proposal_text="CAMPAIGN")
+        Campaign.objects.create(
+            title="t", description="t", target_amount=10000, fundraiser=fundraiser, image_url="https://test.com/")
+        response = self.client.get(
+            self.URL, format="json", **self.admin_bearer_token)
+        data = response.json()
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(data.get("fundraiser_request"), 1)
+        self.assertEqual(data.get("new_campaign"), 1)
+        self.assertEqual(data.get("withdraw_request"), 0)
+        self.assertEqual(data.get("top_up"), 0)
