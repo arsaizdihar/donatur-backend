@@ -12,7 +12,7 @@ This project is built as a final project task for Software Engineering Academy C
 
 ## Description:
 
-**Donation Platform** with CRUD operations to make. In order to retrieve/get/create/update/delete **JWT** is required. (Authorization: **Bearer** {token} attached to the headers). API provides endpoints for registration and token retrieval (access token and refresh token). With this access token, the user can access data related to the database through the API because the user is authenticated.
+**Donation Platform** with CRUD operations to make a request. In order to retrieve/get/create/update/delete **JWT** is required. (Authorization: **Bearer** {token} attached to the headers). API provides endpoints for registration and token retrieval (access token and refresh token). With this access token, the user can access data related to the database through the API because the user is authenticated.
 
 ## Used Frameworks, libraries, tools, databases:
 
